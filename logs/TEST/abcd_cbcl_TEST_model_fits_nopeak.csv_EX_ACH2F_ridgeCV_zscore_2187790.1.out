@@ -1,0 +1,181 @@
+Activating HCP_env
+Running python prediction_nestedCV_val.py HCP2016FreeSurferSubcortical_abcd_baselineYear1Arm1_rest_3517.jay abcd_cbcl_TEST_model_fits_nopeak.csv EX_ACH2F ridgeCV_zscore HCP2016FreeSurferSubcortical_abcd_baselineYear1Arm1_rest_3435.jay abcd_cbcl_grp2_3434_model_fits.csv all in virtual environment
+
+Using EX_ACH2F
+Behaviour data shape: (10060, 8)
+
+Using combined HCP2016FreeSurferSubcortical_abcd_baselineYear1Arm1_rest_3517.jay and HCP2016FreeSurferSubcortical_abcd_baselineYear1Arm1_rest_3435.jay
+Dropping Nans, FC data shape: (6952, 71632)
+NEW FC data shape: (6951, 71632)
+
+Sorting and filtering...
+NEW Behaviour data shape: (5913, 8)
+NEW FC data shape: (5913, 71632)
+
+FCs after removing subjects:
+             0         1         2  ...     71628     71629     71630
+0    -0.052148  0.675335  0.152875  ...  0.341962  0.074747  0.468401
+2    -0.261752  0.382538  0.061561  ... -0.028738  0.097805  0.088554
+3     0.197291  0.420356  0.366304  ...  0.293660 -0.039177  0.382587
+4    -0.209697  0.424412  0.102649  ...  0.151437  0.094799 -0.128502
+3517 -0.137632  0.620407  0.098157  ...  0.190597  0.229932  0.058317
+
+[5 rows x 71631 columns]
+
+Not zscoring!
+
+Not removing confounds!
+Running prediction with Pipeline(steps=[('standardscaler', StandardScaler()),
+                ('ridgecv',
+                 RidgeCV(alphas=array([1.e+00, 1.e+01, 1.e+02, 1.e+03, 1.e+04, 1.e+05]),
+                         scoring='neg_root_mean_squared_error',
+                         store_cv_values=True))])
+
+Running Prediction...
+Using vanilla CV!
+CV with 5x10:
+[CV] END  MAE: (train=-0.394, test=-0.565) Pearson_r: (train=0.822, test=0.096) R2: (train=0.496, test=-0.037) RMSE: (train=-0.491, test=-0.702) Rho: (train=0.799, test=0.077) mean_pred: (train=0.097, test=0.088) median_pred: (train=0.074, test=0.087) sd_pred: (train=0.275, test=0.215) total time= 1.6min
+[CV] END  MAE: (train=-0.396, test=-0.554) Pearson_r: (train=0.825, test=0.229) R2: (train=0.490, test=0.044) RMSE: (train=-0.493, test=-0.691) Rho: (train=0.803, test=0.197) mean_pred: (train=0.093, test=0.092) median_pred: (train=0.071, test=0.101) sd_pred: (train=0.268, test=0.213) total time= 1.3min
+[CV] END  MAE: (train=-0.396, test=-0.550) Pearson_r: (train=0.822, test=0.156) R2: (train=0.494, test=-0.010) RMSE: (train=-0.493, test=-0.687) Rho: (train=0.799, test=0.160) mean_pred: (train=0.097, test=0.109) median_pred: (train=0.075, test=0.114) sd_pred: (train=0.274, test=0.232) total time= 1.3min
+[CV] END  MAE: (train=-0.394, test=-0.564) Pearson_r: (train=0.823, test=0.179) R2: (train=0.492, test=0.010) RMSE: (train=-0.492, test=-0.695) Rho: (train=0.800, test=0.188) mean_pred: (train=0.093, test=0.092) median_pred: (train=0.071, test=0.084) sd_pred: (train=0.272, test=0.220) total time= 1.3min
+[CV] END  MAE: (train=-0.400, test=-0.520) Pearson_r: (train=0.821, test=0.232) R2: (train=0.489, test=0.038) RMSE: (train=-0.497, test=-0.646) Rho: (train=0.799, test=0.219) mean_pred: (train=0.101, test=0.105) median_pred: (train=0.080, test=0.099) sd_pred: (train=0.272, test=0.221) total time= 1.3min
+[CV] END  MAE: (train=-0.397, test=-0.549) Pearson_r: (train=0.823, test=0.120) R2: (train=0.495, test=-0.027) RMSE: (train=-0.493, test=-0.675) Rho: (train=0.799, test=0.112) mean_pred: (train=0.101, test=0.103) median_pred: (train=0.079, test=0.104) sd_pred: (train=0.275, test=0.208) total time= 1.3min
+[CV] END  MAE: (train=-0.395, test=-0.554) Pearson_r: (train=0.822, test=0.126) R2: (train=0.494, test=-0.025) RMSE: (train=-0.492, test=-0.695) Rho: (train=0.800, test=0.119) mean_pred: (train=0.103, test=0.080) median_pred: (train=0.079, test=0.082) sd_pred: (train=0.274, test=0.220) total time= 1.3min
+[CV] END  MAE: (train=-0.396, test=-0.549) Pearson_r: (train=0.825, test=0.188) R2: (train=0.492, test=0.018) RMSE: (train=-0.493, test=-0.689) Rho: (train=0.802, test=0.193) mean_pred: (train=0.097, test=0.104) median_pred: (train=0.071, test=0.100) sd_pred: (train=0.270, test=0.223) total time= 1.3min
+[CV] END  MAE: (train=-0.393, test=-0.575) Pearson_r: (train=0.823, test=0.145) R2: (train=0.493, test=-0.023) RMSE: (train=-0.490, test=-0.728) Rho: (train=0.801, test=0.133) mean_pred: (train=0.087, test=0.100) median_pred: (train=0.064, test=0.094) sd_pred: (train=0.271, test=0.224) total time= 1.2min
+[CV] END  MAE: (train=-0.395, test=-0.558) Pearson_r: (train=0.822, test=0.196) R2: (train=0.491, test=0.024) RMSE: (train=-0.493, test=-0.690) Rho: (train=0.799, test=0.167) mean_pred: (train=0.101, test=0.100) median_pred: (train=0.077, test=0.102) sd_pred: (train=0.271, test=0.210) total time= 1.2min
+[CV] END  MAE: (train=-0.398, test=-0.519) Pearson_r: (train=0.825, test=0.196) R2: (train=0.492, test=0.015) RMSE: (train=-0.496, test=-0.654) Rho: (train=0.803, test=0.203) mean_pred: (train=0.097, test=0.081) median_pred: (train=0.074, test=0.082) sd_pred: (train=0.272, test=0.229) total time= 1.4min
+[CV] END  MAE: (train=-0.394, test=-0.570) Pearson_r: (train=0.820, test=0.197) R2: (train=0.490, test=0.026) RMSE: (train=-0.492, test=-0.709) Rho: (train=0.798, test=0.192) mean_pred: (train=0.095, test=0.084) median_pred: (train=0.072, test=0.082) sd_pred: (train=0.271, test=0.217) total time= 1.4min
+[CV] END  MAE: (train=-0.394, test=-0.573) Pearson_r: (train=0.823, test=0.154) R2: (train=0.494, test=0.003) RMSE: (train=-0.491, test=-0.710) Rho: (train=0.799, test=0.140) mean_pred: (train=0.096, test=0.100) median_pred: (train=0.074, test=0.092) sd_pred: (train=0.272, test=0.211) total time= 1.3min
+[CV] END  MAE: (train=-0.396, test=-0.556) Pearson_r: (train=0.822, test=0.200) R2: (train=0.492, test=0.028) RMSE: (train=-0.493, test=-0.691) Rho: (train=0.799, test=0.176) mean_pred: (train=0.096, test=0.106) median_pred: (train=0.075, test=0.100) sd_pred: (train=0.271, test=0.217) total time= 1.3min
+[CV] END  MAE: (train=-0.399, test=-0.523) Pearson_r: (train=0.821, test=0.168) R2: (train=0.491, test=0.000) RMSE: (train=-0.496, test=-0.657) Rho: (train=0.800, test=0.168) mean_pred: (train=0.100, test=0.102) median_pred: (train=0.079, test=0.103) sd_pred: (train=0.274, test=0.215) total time= 1.3min
+[CV] END  MAE: (train=-0.398, test=-0.537) Pearson_r: (train=0.824, test=0.190) R2: (train=0.492, test=0.015) RMSE: (train=-0.495, test=-0.660) Rho: (train=0.802, test=0.197) mean_pred: (train=0.102, test=0.108) median_pred: (train=0.078, test=0.114) sd_pred: (train=0.272, test=0.206) total time= 1.4min
+[CV] END  MAE: (train=-0.395, test=-0.549) Pearson_r: (train=0.822, test=0.117) R2: (train=0.495, test=-0.022) RMSE: (train=-0.493, test=-0.685) Rho: (train=0.797, test=0.117) mean_pred: (train=0.095, test=0.107) median_pred: (train=0.070, test=0.106) sd_pred: (train=0.275, test=0.207) total time= 1.3min
+[CV] END  MAE: (train=-0.394, test=-0.576) Pearson_r: (train=0.823, test=0.189) R2: (train=0.491, test=0.021) RMSE: (train=-0.491, test=-0.713) Rho: (train=0.801, test=0.183) mean_pred: (train=0.100, test=0.102) median_pred: (train=0.082, test=0.100) sd_pred: (train=0.269, test=0.217) total time= 1.3min
+[CV] END  MAE: (train=-0.395, test=-0.547) Pearson_r: (train=0.824, test=0.130) R2: (train=0.496, test=-0.021) RMSE: (train=-0.492, test=-0.694) Rho: (train=0.802, test=0.088) mean_pred: (train=0.096, test=0.084) median_pred: (train=0.071, test=0.085) sd_pred: (train=0.274, test=0.221) total time= 1.4min
+[CV] END  MAE: (train=-0.392, test=-0.587) Pearson_r: (train=0.825, test=0.158) R2: (train=0.495, test=-0.003) RMSE: (train=-0.490, test=-0.715) Rho: (train=0.803, test=0.135) mean_pred: (train=0.094, test=0.084) median_pred: (train=0.067, test=0.079) sd_pred: (train=0.272, test=0.225) total time= 1.3min
+[CV] END  MAE: (train=-0.395, test=-0.561) Pearson_r: (train=0.824, test=0.158) R2: (train=0.494, test=-0.004) RMSE: (train=-0.492, test=-0.694) Rho: (train=0.799, test=0.164) mean_pred: (train=0.096, test=0.092) median_pred: (train=0.072, test=0.100) sd_pred: (train=0.272, test=0.227) total time= 1.3min
+[CV] END  MAE: (train=-0.398, test=-0.536) Pearson_r: (train=0.821, test=0.192) R2: (train=0.491, test=0.017) RMSE: (train=-0.495, test=-0.672) Rho: (train=0.799, test=0.181) mean_pred: (train=0.101, test=0.081) median_pred: (train=0.080, test=0.079) sd_pred: (train=0.272, test=0.223) total time= 1.3min
+[CV] END  MAE: (train=-0.395, test=-0.566) Pearson_r: (train=0.824, test=0.144) R2: (train=0.494, test=-0.006) RMSE: (train=-0.492, test=-0.701) Rho: (train=0.801, test=0.124) mean_pred: (train=0.099, test=0.097) median_pred: (train=0.072, test=0.103) sd_pred: (train=0.272, test=0.215) total time= 1.3min
+[CV] END  MAE: (train=-0.397, test=-0.552) Pearson_r: (train=0.820, test=0.209) R2: (train=0.489, test=0.033) RMSE: (train=-0.493, test=-0.698) Rho: (train=0.798, test=0.198) mean_pred: (train=0.094, test=0.097) median_pred: (train=0.072, test=0.095) sd_pred: (train=0.270, test=0.215) total time= 1.3min
+[CV] END  MAE: (train=-0.396, test=-0.546) Pearson_r: (train=0.825, test=0.182) R2: (train=0.493, test=0.016) RMSE: (train=-0.493, test=-0.687) Rho: (train=0.801, test=0.182) mean_pred: (train=0.095, test=0.100) median_pred: (train=0.073, test=0.100) sd_pred: (train=0.271, test=0.214) total time= 1.3min
+[CV] END  MAE: (train=-0.397, test=-0.536) Pearson_r: (train=0.823, test=0.213) R2: (train=0.491, test=0.037) RMSE: (train=-0.494, test=-0.678) Rho: (train=0.802, test=0.177) mean_pred: (train=0.096, test=0.100) median_pred: (train=0.075, test=0.103) sd_pred: (train=0.271, test=0.211) total time= 1.3min
+[CV] END  MAE: (train=-0.394, test=-0.569) Pearson_r: (train=0.822, test=0.133) R2: (train=0.494, test=-0.020) RMSE: (train=-0.492, test=-0.700) Rho: (train=0.798, test=0.122) mean_pred: (train=0.098, test=0.110) median_pred: (train=0.076, test=0.100) sd_pred: (train=0.274, test=0.226) total time= 1.3min
+[CV] END  MAE: (train=-0.396, test=-0.542) Pearson_r: (train=0.822, test=0.140) R2: (train=0.494, test=-0.016) RMSE: (train=-0.494, test=-0.671) Rho: (train=0.800, test=0.136) mean_pred: (train=0.097, test=0.100) median_pred: (train=0.073, test=0.109) sd_pred: (train=0.275, test=0.218) total time= 1.3min
+[CV] END  MAE: (train=-0.395, test=-0.562) Pearson_r: (train=0.823, test=0.162) R2: (train=0.494, test=0.001) RMSE: (train=-0.492, test=-0.688) Rho: (train=0.802, test=0.129) mean_pred: (train=0.097, test=0.115) median_pred: (train=0.074, test=0.118) sd_pred: (train=0.273, test=0.220) total time= 1.3min
+[CV] END  MAE: (train=-0.395, test=-0.558) Pearson_r: (train=0.824, test=0.191) R2: (train=0.493, test=0.025) RMSE: (train=-0.492, test=-0.697) Rho: (train=0.800, test=0.197) mean_pred: (train=0.099, test=0.080) median_pred: (train=0.076, test=0.071) sd_pred: (train=0.271, test=0.210) total time= 1.3min
+[CV] END  MAE: (train=-0.397, test=-0.538) Pearson_r: (train=0.822, test=0.155) R2: (train=0.493, test=-0.013) RMSE: (train=-0.495, test=-0.668) Rho: (train=0.800, test=0.125) mean_pred: (train=0.099, test=0.091) median_pred: (train=0.075, test=0.095) sd_pred: (train=0.274, test=0.230) total time= 1.3min
+[CV] END  MAE: (train=-0.397, test=-0.517) Pearson_r: (train=0.825, test=0.227) R2: (train=0.491, test=0.032) RMSE: (train=-0.495, test=-0.659) Rho: (train=0.801, test=0.229) mean_pred: (train=0.092, test=0.099) median_pred: (train=0.069, test=0.092) sd_pred: (train=0.271, test=0.236) total time= 1.3min
+[CV] END  MAE: (train=-0.399, test=-0.529) Pearson_r: (train=0.821, test=0.174) R2: (train=0.492, test=0.001) RMSE: (train=-0.496, test=-0.655) Rho: (train=0.798, test=0.174) mean_pred: (train=0.102, test=0.104) median_pred: (train=0.077, test=0.108) sd_pred: (train=0.274, test=0.211) total time= 1.3min
+[CV] END  MAE: (train=-0.394, test=-0.568) Pearson_r: (train=0.821, test=0.176) R2: (train=0.492, test=0.014) RMSE: (train=-0.491, test=-0.713) Rho: (train=0.799, test=0.136) mean_pred: (train=0.094, test=0.109) median_pred: (train=0.071, test=0.105) sd_pred: (train=0.272, test=0.218) total time= 1.3min
+[CV] END  MAE: (train=-0.395, test=-0.563) Pearson_r: (train=0.821, test=0.192) R2: (train=0.490, test=0.029) RMSE: (train=-0.492, test=-0.713) Rho: (train=0.799, test=0.197) mean_pred: (train=0.098, test=0.087) median_pred: (train=0.075, test=0.082) sd_pred: (train=0.270, test=0.201) total time= 1.3min
+[CV] END  MAE: (train=-0.396, test=-0.556) Pearson_r: (train=0.822, test=0.184) R2: (train=0.493, test=0.011) RMSE: (train=-0.494, test=-0.674) Rho: (train=0.799, test=0.177) mean_pred: (train=0.101, test=0.115) median_pred: (train=0.079, test=0.119) sd_pred: (train=0.273, test=0.210) total time= 1.3min
+[CV] END  MAE: (train=-0.393, test=-0.588) Pearson_r: (train=0.823, test=0.113) R2: (train=0.495, test=-0.022) RMSE: (train=-0.490, test=-0.725) Rho: (train=0.798, test=0.103) mean_pred: (train=0.097, test=0.084) median_pred: (train=0.075, test=0.095) sd_pred: (train=0.273, test=0.215) total time= 1.3min
+[CV] END  MAE: (train=-0.394, test=-0.562) Pearson_r: (train=0.824, test=0.102) R2: (train=0.496, test=-0.039) RMSE: (train=-0.491, test=-0.706) Rho: (train=0.801, test=0.081) mean_pred: (train=0.092, test=0.101) median_pred: (train=0.068, test=0.100) sd_pred: (train=0.275, test=0.218) total time= 1.3min
+[CV] END  MAE: (train=-0.397, test=-0.547) Pearson_r: (train=0.823, test=0.160) R2: (train=0.493, test=-0.002) RMSE: (train=-0.494, test=-0.673) Rho: (train=0.800, test=0.178) mean_pred: (train=0.102, test=0.094) median_pred: (train=0.080, test=0.091) sd_pred: (train=0.273, test=0.210) total time= 1.3min
+[CV] END  MAE: (train=-0.395, test=-0.568) Pearson_r: (train=0.825, test=0.199) R2: (train=0.491, test=0.028) RMSE: (train=-0.491, test=-0.707) Rho: (train=0.804, test=0.210) mean_pred: (train=0.093, test=0.097) median_pred: (train=0.072, test=0.109) sd_pred: (train=0.268, test=0.209) total time= 1.3min
+[CV] END  MAE: (train=-0.397, test=-0.543) Pearson_r: (train=0.823, test=0.179) R2: (train=0.492, test=0.014) RMSE: (train=-0.494, test=-0.679) Rho: (train=0.801, test=0.175) mean_pred: (train=0.095, test=0.097) median_pred: (train=0.071, test=0.104) sd_pred: (train=0.272, test=0.213) total time= 1.3min
+[CV] END  MAE: (train=-0.395, test=-0.564) Pearson_r: (train=0.823, test=0.213) R2: (train=0.491, test=0.033) RMSE: (train=-0.491, test=-0.708) Rho: (train=0.800, test=0.190) mean_pred: (train=0.097, test=0.090) median_pred: (train=0.076, test=0.096) sd_pred: (train=0.270, test=0.234) total time= 1.3min
+[CV] END  MAE: (train=-0.395, test=-0.548) Pearson_r: (train=0.823, test=0.214) R2: (train=0.490, test=0.033) RMSE: (train=-0.493, test=-0.690) Rho: (train=0.800, test=0.216) mean_pred: (train=0.093, test=0.088) median_pred: (train=0.071, test=0.073) sd_pred: (train=0.270, test=0.216) total time= 1.3min
+[CV] END  MAE: (train=-0.395, test=-0.551) Pearson_r: (train=0.823, test=0.110) R2: (train=0.496, test=-0.042) RMSE: (train=-0.493, test=-0.677) Rho: (train=0.800, test=0.106) mean_pred: (train=0.102, test=0.109) median_pred: (train=0.078, test=0.111) sd_pred: (train=0.276, test=0.217) total time= 1.3min
+[CV] END  MAE: (train=-0.397, test=-0.536) Pearson_r: (train=0.822, test=0.231) R2: (train=0.489, test=0.048) RMSE: (train=-0.495, test=-0.674) Rho: (train=0.799, test=0.228) mean_pred: (train=0.098, test=0.084) median_pred: (train=0.077, test=0.081) sd_pred: (train=0.270, test=0.211) total time= 1.3min
+[CV] END  MAE: (train=-0.394, test=-0.577) Pearson_r: (train=0.821, test=0.110) R2: (train=0.494, test=-0.022) RMSE: (train=-0.491, test=-0.706) Rho: (train=0.797, test=0.107) mean_pred: (train=0.098, test=0.097) median_pred: (train=0.075, test=0.100) sd_pred: (train=0.274, test=0.206) total time= 1.3min
+[CV] END  MAE: (train=-0.397, test=-0.551) Pearson_r: (train=0.822, test=0.178) R2: (train=0.492, test=0.005) RMSE: (train=-0.493, test=-0.685) Rho: (train=0.801, test=0.164) mean_pred: (train=0.104, test=0.099) median_pred: (train=0.081, test=0.105) sd_pred: (train=0.273, test=0.217) total time= 1.3min
+[CV] END  MAE: (train=-0.394, test=-0.559) Pearson_r: (train=0.823, test=0.149) R2: (train=0.494, test=-0.005) RMSE: (train=-0.492, test=-0.694) Rho: (train=0.800, test=0.147) mean_pred: (train=0.093, test=0.094) median_pred: (train=0.071, test=0.080) sd_pred: (train=0.273, test=0.211) total time= 1.3min
+[CV] END  MAE: (train=-0.396, test=-0.536) Pearson_r: (train=0.824, test=0.161) R2: (train=0.494, test=-0.009) RMSE: (train=-0.494, test=-0.673) Rho: (train=0.801, test=0.163) mean_pred: (train=0.094, test=0.103) median_pred: (train=0.072, test=0.095) sd_pred: (train=0.273, test=0.230) total time= 1.3min
+[CV] END  MAE: (train=-0.396, test=-0.552) Pearson_r: (train=0.824, test=0.201) R2: (train=0.491, test=0.028) RMSE: (train=-0.493, test=-0.693) Rho: (train=0.802, test=0.170) mean_pred: (train=0.097, test=0.098) median_pred: (train=0.076, test=0.093) sd_pred: (train=0.270, test=0.218) total time= 1.3min
+100000.0
+100000.0
+100000.0
+100000.0
+100000.0
+100000.0
+100000.0
+100000.0
+100000.0
+100000.0
+100000.0
+100000.0
+100000.0
+100000.0
+100000.0
+100000.0
+100000.0
+100000.0
+100000.0
+100000.0
+100000.0
+100000.0
+100000.0
+100000.0
+100000.0
+100000.0
+100000.0
+100000.0
+100000.0
+100000.0
+100000.0
+100000.0
+100000.0
+100000.0
+100000.0
+100000.0
+100000.0
+100000.0
+100000.0
+100000.0
+100000.0
+100000.0
+100000.0
+100000.0
+100000.0
+100000.0
+100000.0
+100000.0
+100000.0
+100000.0
+Overall MEAN accuracy:
+fit_time             76.855141
+score_time            0.392464
+test_RMSE            -0.688896
+train_RMSE           -0.492861
+test_MAE             -0.553170
+train_MAE            -0.395638
+test_R2               0.005619
+train_R2              0.492598
+test_Pearson_r        0.170364
+train_Pearson_r       0.822817
+test_Rho              0.160937
+train_Rho             0.800011
+test_mean_pred        0.096892
+train_mean_pred       0.097125
+test_median_pred      0.096471
+train_median_pred     0.074247
+test_sd_pred          0.217246
+train_sd_pred         0.272180
+dtype: float64
+Overall SD accuracy:
+fit_time             3.131595
+score_time           0.012560
+test_RMSE            0.019009
+train_RMSE           0.001666
+test_MAE             0.016559
+train_MAE            0.001565
+test_R2              0.023424
+train_R2             0.001926
+test_Pearson_r       0.036113
+train_Pearson_r      0.001306
+test_Rho             0.039322
+train_Rho            0.001592
+test_mean_pred       0.009380
+train_mean_pred      0.003511
+test_median_pred     0.011499
+train_median_pred    0.003812
+test_sd_pred         0.007789
+train_sd_pred        0.001980
+dtype: float64
+saving: /data/project/impulsivity/pfactors/res/all/cv/pipe_ridgeCV_zscore-source_HCP2016FreeSurferSubcortical_abcd_baselineYear1Arm1_rest_3517-beh_abcd_cbcl_TEST_model_fits_nopeak_EX_ACH2F-rseed_123456-cv_res.csv
+saving averaged accuracy: /data/project/impulsivity/pfactors/res/all/mean_accuracy/pipe_ridgeCV_zscore_averaged-source_HCP2016FreeSurferSubcortical_abcd_baselineYear1Arm1_rest_3517-beh_abcd_cbcl_TEST_model_fits_nopeak_EX_ACH2F-rseed_123456-cv_res.csv
+
+FINISHED WITH PREDICTION
+

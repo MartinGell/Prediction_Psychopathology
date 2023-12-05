@@ -1,0 +1,28 @@
+[Parallel(n_jobs=1)]: Using backend SequentialBackend with 1 concurrent workers.
+Traceback (most recent call last):
+  File "/home/mgell/miniconda3/envs/HCP_env/lib/python3.9/site-packages/joblib/parallel.py", line 820, in dispatch_one_batch
+    tasks = self._ready_batches.get(block=False)
+  File "/home/mgell/miniconda3/envs/HCP_env/lib/python3.9/queue.py", line 168, in get
+    raise Empty
+_queue.Empty
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/data/project/impulsivity/pfactors/code/juseless/prediction_nestedCV_val.py", line 199, in <module>
+    scores = cross_validate(model, X, np.ravel(y), scoring=scoring, cv=outer_cv,
+  File "/home/mgell/miniconda3/envs/HCP_env/lib/python3.9/site-packages/sklearn/utils/validation.py", line 63, in inner_f
+    return f(*args, **kwargs)
+  File "/home/mgell/miniconda3/envs/HCP_env/lib/python3.9/site-packages/sklearn/model_selection/_validation.py", line 250, in cross_validate
+    results = parallel(
+  File "/home/mgell/miniconda3/envs/HCP_env/lib/python3.9/site-packages/joblib/parallel.py", line 1041, in __call__
+    if self.dispatch_one_batch(iterator):
+  File "/home/mgell/miniconda3/envs/HCP_env/lib/python3.9/site-packages/joblib/parallel.py", line 831, in dispatch_one_batch
+    islice = list(itertools.islice(iterator, big_batch_size))
+  File "/home/mgell/miniconda3/envs/HCP_env/lib/python3.9/site-packages/sklearn/model_selection/_validation.py", line 250, in <genexpr>
+    results = parallel(
+  File "/home/mgell/miniconda3/envs/HCP_env/lib/python3.9/site-packages/sklearn/model_selection/_split.py", line 1201, in split
+    for train_index, test_index in cv.split(X, y, groups):
+  File "/home/mgell/miniconda3/envs/HCP_env/lib/python3.9/site-packages/sklearn/model_selection/_split.py", line 327, in split
+    raise ValueError(
+ValueError: Cannot have number of splits n_splits=10 greater than the number of samples: n_samples=0.

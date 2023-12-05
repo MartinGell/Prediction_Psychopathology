@@ -1,0 +1,25 @@
+# Run specific variables
+
+# The environment
+universe    = vanilla
+getenv      = True
+
+# Resources
+request_cpus   = 1
+request_memory = 1G
+request_disk   = 1G
+
+# Execution
+initialdir = /data/project/impulsivity/pfactors/code/juseless
+executable = $(initialdir)/run_in_venv.sh
+transfer_executable = False
+
+arguments = fmri_processing parcelate_cifti.sh $(sub_i)
+
+# Job
+log         = $(initialdir)/logs/CT/get_CT_$(Cluster).$(Process).log
+output      = $(initialdir)/logs/CT/get_CT_$(Cluster).$(Process).out
+error       = $(initialdir)/logs/CT/get_CT_$(Cluster).$(Process).err
+
+queue sub_i from opts/subs.txt
+

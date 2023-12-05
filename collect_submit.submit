@@ -1,0 +1,22 @@
+# The environment
+universe    = vanilla
+getenv      = True
+
+# Resources
+request_cpus   = 1
+request_memory = 20G
+request_disk   = 1G
+
+# Execution
+initialdir = /data/project/impulsivity/pfactors/code/juseless
+executable = $(initialdir)/run_in_venv.sh
+transfer_executable = False
+
+arguments = old_HCP_env python3 collect_FC_abcd.py
+
+# Job
+log         = $(initialdir)/logs/create_FC_file_$(Cluster).$(Process).log
+output      = $(initialdir)/logs/create_FC_file_$(Cluster).$(Process).out
+error       = $(initialdir)/logs/create_FC_file_$(Cluster).$(Process).err
+
+queue

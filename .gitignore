@@ -3,7 +3,10 @@
 
 
 ### PROJECT FOLDER SPECIFIC ###
-/logs/
+*/*.err
+*/*.out
+*/*.log
+/dev
 
 
 

@@ -8,7 +8,7 @@
 */*.log
 /dev
 /res 
-
+/log
 
 
 ### Linux ###

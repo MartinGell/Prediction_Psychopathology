@@ -13,21 +13,21 @@ from scipy.stats import zscore
 
 from func.utils import filter_outliers, sort_files, transform2SD, cor_true_pred_pearson, cor_true_pred_spearman, prep_confs, mean_predictions, median_predictions, sd_predictions
 from func.models import model_choice
-from sklearn.model_selection import ShuffleSplit, cross_validate, learning_curve, train_test_split, RepeatedKFold, KFold, GridSearchCV
+from sklearn.model_selection import ShuffleSplit, cross_validate, learning_curve, train_test_split, RepeatedKFold, KFold, GridSearchCV, GroupShuffleSplit, GroupKFold, permutation_test_score
 
 
 ### Set params ###
-FC_file = 'HCP2016FreeSurferSubcortical_abcd_baselineYear1Arm1_rest_3435.jay' #sys.argv[1] #'HCP2016FreeSurferSubcortical_abcd_baselineYear1Arm1_rest_3435.jay' #sys.argv[1]
-beh_file = 'abcd_cbcl_TEST_model_fits_rel_EX.csv' #sys.argv[2] #'abcd_cbcl_grp1_3434_model_fits.csv' #sys.argv[2]
-beh = 'EX_ACH2F'#'P_CLRK4S' #sys.argv[3] #'IN_ACH2F' 'cbcl_scr_syn_totprob_t' #'interview_age' 'cbcl_scr_syn_totprob_t' #sys.argv[3]
-pipe = 'ridgeCV_zscore' #sys.argv[4] #'ridgeCV_zscore' #sys.argv[4]
+FC_file = sys.argv[1]#'HCP2016FreeSurferSubcortical_abcd_baselineYear1Arm1_rest_3517.jay' #'HCP2016FreeSurferSubcortical_abcd_baselineYear1Arm1_rest_3435.jay' #sys.argv[1] #'HCP2016FreeSurferSubcortical_abcd_baselineYear1Arm1_rest_3435.jay' #sys.argv[1]
+beh_file = sys.argv[2]#'abcd_cbcl_both_groups.csv' #sys.argv[2] #'abcd_cbcl_grp1_3434_model_fits.csv' #sys.argv[2]
+beh = sys.argv[3]#'EX_ACH2F'#'P_CLRK4S' #sys.argv[3] #'IN_ACH2F' 'cbcl_scr_syn_totprob_t' #'interview_age' 'cbcl_scr_syn_totprob_t' #sys.argv[3]
+pipe = sys.argv[4]#'ridgeCV_zscore_stratified_KFold_permutation' #sys.argv[4] #'ridgeCV_zscore' #sys.argv[4]
 
 k_inner = 5             # k folds for hyperparam search
 k_outer = 10            # k folds for CV
 n_outer = 5             # n repeats for CV
 rs = 123456             # random state: int for reproducibility or None
 
-predict = False         # predict or just subsample?
+predict = True         # predict or just subsample?
 subsample = False       # Subsample data and compute learning curves?
 
 remove_confounds = False # Remove confounds?
@@ -35,16 +35,18 @@ confs_in_file = False    # False = confs in beh file, otherwise it loads them fr
 confounds = ['interview_age', 'gender'] #['Age', 'Sex', 'FS_IntraCranial_Vol'] # 'FS_Total_GM_Vol'
 categorical = ['gender'] #['Sex']   # of which categorical?
 
-external_validation = True
-val_FC_file = 'HCP2016FreeSurferSubcortical_abcd_baselineYear1Arm1_rest_3517.jay' #sys.argv[5] #'HCP2016FreeSurferSubcortical_abcd_baselineYear1Arm1_rest_3517.jay' #sys.argv[5]
-val_beh_file = 'abcd_cbcl_TEST_model_fits_rel_EX.csv' #sys.argv[6] #'abcd_cbcl_grp2_3517_model_fits.csv' #sys.argv[6]
+external_validation = False
+#val_FC_file = 'HCP2016FreeSurferSubcortical_abcd_baselineYear1Arm1_rest_3517.jay' #sys.argv[5] #'HCP2016FreeSurferSubcortical_abcd_baselineYear1Arm1_rest_3517.jay' #sys.argv[5]
+#val_beh_file = 'abcd_cbcl_grp2_3517_model_fits.csv' #sys.argv[6] #'abcd_cbcl_grp2_3517_model_fits.csv' #sys.argv[6]
 val_beh = beh
 
 zscr = False             # zscore features
 val_split = False       # Split data to train and held out validation?
 val_split_size = 0.2    # Size of validation held out sample
 
-res_folder = 'TEST_transform' #sys.argv[7] #'disc_rep'    # save results separately to ...
+perm = 100               # number or permutations if doings permutation testing
+
+res_folder = 'permutation' #sys.argv[7] #'disc_rep'    # save results separately to ...
 #designator = 'test'    # string designation of output file
 
 if subsample:
@@ -194,6 +196,16 @@ if predict:
         # results
         cv_res = pd.DataFrame(scores)
         for i in cv_res.loc[:,'estimator']: print(i.best_estimator_)             # put to utils?
+
+        # Print results
+        mean_accuracy = cv_res.mean()
+        print(f'Overall MEAN accuracy:')
+        print(mean_accuracy)
+
+        sd_accuracy = cv_res.std()
+        print(f'Overall SD accuracy:')
+        print(sd_accuracy)
+        #
     elif nested == 0: # non-nested CV
         print('Using vanilla CV!')
         print(f'CV with {n_outer}x{k_outer}:')
@@ -205,20 +217,66 @@ if predict:
             for i in scores['estimator']: print(i.alpha_)
         elif pipe == 'ridgeCV_zscore':                                          # put to utils?
             for i in scores['estimator']: print(i[1].alpha_)                       # put to utils?
+    
+        # Print results
+        mean_accuracy = cv_res.mean()
+        print(f'Overall MEAN accuracy:')
+        print(mean_accuracy)
 
+        sd_accuracy = cv_res.std()
+        print(f'Overall SD accuracy:')
+        print(sd_accuracy)
+        #
+    elif nested == 99:
+        print('Using stratified vanilla CV!')
+        splits = (n_outer*k_outer)
+        train_size = 0.7
+        group = 'Family_ID'
+        print(f'CV with {splits} splits of {round((1-train_size)*100)}% of groups out')
+        print(f'Grouping variable: {group}\n')
+        outer_cv = GroupShuffleSplit(n_splits=splits, train_size=train_size, random_state=rs)
+        scores = cross_validate(model, X, np.ravel(y), groups=tab[group], scoring=scoring, cv=outer_cv,
+            return_train_score=True, return_estimator=True, verbose=3, n_jobs=1)
+        # results
+        cv_res = pd.DataFrame(scores)
+        if pipe == 'ridgeCV': # put to utils?
+            for i in scores['estimator']: print(i.alpha_)
+        elif pipe.__contains__('confound'):
+            for i in scores['estimator']: print(i[2].alpha_)
+        else:
+            for i in scores['estimator']: print(i[1].alpha_)
+        #
+    elif nested == 8: # permutation
+        print('\nUsing stratified nested 2-fold CV with permutation!')
+        group = 'sample'
+        outer_cv = GroupKFold(n_splits=2)  # 2-fold cross-validation using GroupKFold with groups replaced GroupSchuffleSplit
+        
+        print('\nFirst running prediction with empirical results...')
+        scores = cross_validate(model, X, np.ravel(y), groups=tab[group], scoring=scoring, cv=outer_cv,
+            return_train_score=True, return_estimator=True, verbose=3, n_jobs=1)
+        cv_res = pd.DataFrame(scores)
 
-    # Print results
-    mean_accuracy = cv_res.mean()
-    print(f'Overall MEAN accuracy:')
-    print(mean_accuracy)
+        # Print results
+        mean_accuracy = cv_res.mean()
+        print(f'Overall MEAN accuracy:')
+        print(mean_accuracy)
 
-    sd_accuracy = cv_res.std()
-    print(f'Overall SD accuracy:')
-    print(sd_accuracy)
+        print(f'\nRunning {perm} permutations...')
+        score_empirical, perm_scores, pval = permutation_test_score(model, X, np.ravel(y), scoring=score_spearman, cv=outer_cv, 
+                                                                    groups=tab[group], n_permutations=perm, verbose=5)
+        print(f"Score on original data: {score_empirical:.2f} (p-value: {pval:.3f})")
+
+        # save perm results
+        mean_accuracy['pvalue'] = pval
+        cv_res = pd.DataFrame(perm_scores)
+        cv_res.rename(columns={0:'perm_score'}, inplace=True)    
 
     ## SAVE
     # CV results
-    out_file = out_dir / 'cv'
+    if nested == 8:
+        out_file = out_dir / 'permutation'
+    else:
+        out_file = out_dir / 'cv'
     out_file.mkdir(parents=True, exist_ok=True)
     out_file = out_file / f"pipe_{pipe}-source_{src_fc}-beh_{beh_f[len(beh_f)-1]}_{beh}-rseed_{rs}-cv_res.csv"
     print(f'saving: {out_file}')

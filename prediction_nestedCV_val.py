@@ -338,48 +338,35 @@ if external_validation:
     #print(f'\nRunning extrenal validation on {val_FC_file} dataset')
     print(f'\n\nRunning manual two fold CV with discover and replication ABCD datasets\n')
 
-    path2beh = wd / 'res' / val_beh_file
-    val_tab_all = pd.read_csv(path2beh) # beh data
-    val_tab_all = val_tab_all.dropna(subset = [val_beh]) # drop nans if there are in beh of interest
-    print(f'\nUsing: {val_beh}')
-    print(f'Behaviour data shape: {val_tab_all.shape}')
+    # Discovery sample
+    disc_tab_all = tab_all[tab_all['sample'] == 'grp1']
+    disc_FCs_all = FCs_all[FCs_all['subID'].isin(disc_tab_all['EID'])]
 
-    # attach confounds to tab_all if not there already before filtering
-    #NEED TO CHECK IF THIS WILL WORK WITH CONF REMOVAL
-    #if remove_confounds:
-    #    if confs_in_file:
-    #        tab_all = prep_confs(tab_all, wd, val_FC_file)
+    # Filter FC subs based on behaviour subs
+    disc_tab, disc_FCs = sort_files(disc_tab_all, disc_FCs_all)
 
-    # remove outliers
-    #val_tab_all = filter_outliers(val_tab_all,val_beh)
-    #print(f'Behaviour data shape: {val_tab_all.shape}') # just to check
+    # set up X and y for prediction
+    disc_target = disc_tab.loc[:, [beh]]
+    disc_FCs.pop(disc_FCs.keys()[0])
+    disc_FCs = disc_FCs.reset_index(drop = True)
+    print('\nFCs after removing subjects:')
+    print(disc_FCs.head())
+    
+    X = disc_FCs
+    y = disc_target
 
-    # load data and define leave out set
-    # table of subs (rows) by regions (columns)
-    path2FC = wd / 'input' / val_FC_file
-    val_FCs_all = dt.fread(path2FC)
-    val_FCs_all = val_FCs_all.to_pandas()
-    val_FCs_all = val_FCs_all.dropna()
-    print(f'\nUsing {val_FC_file}')
-    print(f'FC data shape: {val_FCs_all.shape}')
+    # Validation sample
+    val_tab_all = tab_all[tab_all['sample'] == 'grp2']
+    val_FCs_all = FCs_all[FCs_all['subID'].isin(val_tab_all['EID'])]
 
     # Filter FC subs based on behaviour subs
     val_tab, val_FCs = sort_files(val_tab_all, val_FCs_all)
-    # transform scores to SD_scores -> not sure if this is the right place for it
 
     # set up X and y for prediction
     val_target = val_tab.loc[:, [val_beh]]
     val_FCs.pop(val_FCs.keys()[0])
     print('\nFCs after removing subjects:')
     print(val_FCs.head())
-
-    if zscr:
-        print('\nZscoring FCs...')
-        val_FCs = val_FCs.apply(lambda V: zscore(V), axis=1, result_type='broadcast')
-        print('zscored')
-    else:
-        print('\nNot zscoring!')
-
 
     ## Plot stuff    
     y.hist(bins=100)

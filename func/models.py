@@ -114,8 +114,8 @@ def model_choice(pipe, X = None, confound = None, cat_columns = None):
             StandardScaler(),RidgeCV(alphas=alphas, store_cv_values=True, scoring="neg_root_mean_squared_error")
             )
         grid = []
-    elif pipe == 'ridgeCV_zscore_stratified_KFold':
-        nested = 99 # using nested cv
+    elif pipe == 'ridgeCV_zscore_group_2Fold':
+        nested = 2 # using stratified CV
         alphas = [1e-4, 1e-3, 1e-2, 0.1, 1, 10, 100, 1e3, 1e4, 1e5] #[1, 10, 100, 500, 1e3, 1e4] #[1e-4, 1e-3, 1e-2, 0.1, 1, 10, 100, 1e3, 1e4]        
         model = make_pipeline(
             StandardScaler(),RidgeCV(alphas=alphas, store_cv_values=True, scoring="neg_root_mean_squared_error")

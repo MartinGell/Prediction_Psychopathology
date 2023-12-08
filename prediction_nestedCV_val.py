@@ -35,18 +35,23 @@ confs_in_file = False    # False = confs in beh file, otherwise it loads them fr
 confounds = ['interview_age', 'gender'] #['Age', 'Sex', 'FS_IntraCranial_Vol'] # 'FS_Total_GM_Vol'
 categorical = ['gender'] #['Sex']   # of which categorical?
 
+zscr = False             # zscore features
+
 external_validation = False
 #val_FC_file = 'HCP2016FreeSurferSubcortical_abcd_baselineYear1Arm1_rest_3517.jay' #sys.argv[5] #'HCP2016FreeSurferSubcortical_abcd_baselineYear1Arm1_rest_3517.jay' #sys.argv[5]
 #val_beh_file = 'abcd_cbcl_grp2_3517_model_fits.csv' #sys.argv[6] #'abcd_cbcl_grp2_3517_model_fits.csv' #sys.argv[6]
 val_beh = beh
 
-zscr = False             # zscore features
 val_split = False       # Split data to train and held out validation?
 val_split_size = 0.2    # Size of validation held out sample
 
-perm = 100               # number or permutations if doings permutation testing
+manual_val_split = True # use a grouping variable to split off validation
+grouping = 'sample'     # column that should be used to split the dataset
 
-res_folder = 'permutation' #sys.argv[7] #'disc_rep'    # save results separately to ...
+permute = True          # do permutation testing?
+perm = 100              # number or permutations if doings permutation testing
+
+#res_folder = 'permutation' #sys.argv[7] #'disc_rep'    # save results separately to ...
 #designator = 'test'    # string designation of output file
 
 if subsample:
@@ -246,13 +251,12 @@ if predict:
         else:
             for i in scores['estimator']: print(i[1].alpha_)
         #
-    elif nested == 8: # permutation
+    elif nested == 2: # two-fold prediction for ABCD
         print('\nUsing stratified nested 2-fold CV with permutation!')
-        group = 'sample'
         outer_cv = GroupKFold(n_splits=2)  # 2-fold cross-validation using GroupKFold with groups replaced GroupSchuffleSplit
         
         print('\nFirst running prediction with empirical results...')
-        scores = cross_validate(model, X, np.ravel(y), groups=tab[group], scoring=scoring, cv=outer_cv,
+        scores = cross_validate(model, X, np.ravel(y), groups=tab[grouping], scoring=scoring, cv=outer_cv,
             return_train_score=True, return_estimator=True, verbose=3, n_jobs=1)
         cv_res = pd.DataFrame(scores)
 
@@ -261,22 +265,10 @@ if predict:
         print(f'Overall MEAN accuracy:')
         print(mean_accuracy)
 
-        print(f'\nRunning {perm} permutations...')
-        score_empirical, perm_scores, pval = permutation_test_score(model, X, np.ravel(y), scoring=score_spearman, cv=outer_cv, 
-                                                                    groups=tab[group], n_permutations=perm, verbose=5)
-        print(f"Score on original data: {score_empirical:.2f} (p-value: {pval:.3f})")
-
-        # save perm results
-        mean_accuracy['pvalue'] = pval
-        cv_res = pd.DataFrame(perm_scores)
-        cv_res.rename(columns={0:'perm_score'}, inplace=True)    
 
     ## SAVE
     # CV results
-    if nested == 8:
-        out_file = out_dir / 'permutation'
-    else:
-        out_file = out_dir / 'cv'
+    out_file = out_dir / 'cv'
     out_file.mkdir(parents=True, exist_ok=True)
     out_file = out_file / f"pipe_{pipe}-source_{src_fc}-beh_{beh_f[len(beh_f)-1]}_{beh}-rseed_{rs}-cv_res.csv"
     print(f'saving: {out_file}')
@@ -290,6 +282,55 @@ if predict:
     mean_accuracy.to_frame().transpose().to_csv(out_file, index=False)
 
     print('\nFINISHED WITH PREDICTION\n')
+
+#%%
+
+# Permutation testing adapted for 2-fold
+elif permute:
+    if "group_2Fold" not in pipe:
+        raise ValueError("You are probably using the wrong pipe argument - this permutation is set to group 2-fold CV.")
+    
+    print('\nUsing stratified nested 2-fold CV with permutation!')
+    outer_cv = GroupKFold(n_splits=2)  # 2-fold cross-validation using GroupKFold with groups replaced GroupSchuffleSplit
+    
+    print('\nFirst running prediction with empirical results...')
+    scores = cross_validate(model, X, np.ravel(y), groups=tab[grouping], scoring=scoring, cv=outer_cv,
+        return_train_score=True, return_estimator=True, verbose=3, n_jobs=1)
+    cv_res = pd.DataFrame(scores)
+
+    # Print results
+    mean_accuracy = cv_res.mean()
+    print(f'Overall MEAN accuracy:')
+    print(mean_accuracy)
+
+    print(f'\nRunning {perm} permutations...')
+    score_empirical, perm_scores, pval = permutation_test_score(model, X, np.ravel(y), scoring=score_spearman, cv=outer_cv, 
+                                                                groups=tab[grouping], n_permutations=perm, verbose=5)
+    print(f"Score on original data: {score_empirical:.2f} (p-value: {pval:.3f})")
+
+    # save perm results
+    mean_accuracy['pvalue'] = pval
+    cv_res = pd.DataFrame(perm_scores)
+    cv_res.rename(columns={0:'perm_score'}, inplace=True)    
+
+    # SAVE
+    # CV results
+    out_file = out_dir / 'permutation' / 'permutation_scores'
+    out_file.mkdir(parents=True, exist_ok=True)
+    out_file = out_file / f"pipe_{pipe}-source_{src_fc}-beh_{beh_f[len(beh_f)-1]}_{beh}-rseed_{rs}-cv_res.csv"
+    print(f'saving: {out_file}')
+    cv_res.to_csv(out_file, index=False)
+
+    # Averaged CV results
+    out_file = out_dir / 'permutation' / 'mean_accuracy'
+    out_file.mkdir(parents=True, exist_ok=True)
+    out_file = out_file / f"pipe_{pipe}_averaged-source_{src_fc}-beh_{beh_f[len(beh_f)-1]}_{beh}-rseed_{rs}-cv_res.csv"
+    print(f'saving averaged accuracy: {out_file}')
+    mean_accuracy.to_frame().transpose().to_csv(out_file, index=False)
+
+    print('\nFINISHED WITH PERMUTATION\n')
+
+
 
 #%%
 if val_split:
@@ -334,12 +375,13 @@ if val_split:
 
 
 # External validation adapted to two fold CV
-if external_validation:
+if manual_val_split:
     #print(f'\nRunning extrenal validation on {val_FC_file} dataset')
     print(f'\n\nRunning manual two fold CV with discover and replication ABCD datasets\n')
 
     # Discovery sample
-    disc_tab_all = tab_all[tab_all['sample'] == 'grp1']
+    print('Splitting sample into discovery...')
+    disc_tab_all = tab_all[tab_all[grouping] == 'grp1']
     disc_FCs_all = FCs_all[FCs_all['subID'].isin(disc_tab_all['EID'])]
 
     # Filter FC subs based on behaviour subs
@@ -356,7 +398,8 @@ if external_validation:
     y = disc_target
 
     # Validation sample
-    val_tab_all = tab_all[tab_all['sample'] == 'grp2']
+    print('... and validation')
+    val_tab_all = tab_all[tab_all[grouping] == 'grp2']
     val_FCs_all = FCs_all[FCs_all['subID'].isin(val_tab_all['EID'])]
 
     # Filter FC subs based on behaviour subs
@@ -513,6 +556,108 @@ if external_validation:
     out_file = out_file / f"pipe_{pipe}_averaged-beh_{beh}-avg_{src_fc}_and_{val_FC_file}-rseed_{rs}-res.csv"
     print(f'saving averaged accuracy: {out_file}')
 ###    val_res_complete.to_frame().transpose().to_csv(out_file, index=False)
+
+
+# External validation adapted to two fold CV
+if external_validation:
+    #print(f'\nRunning extrenal validation on {val_FC_file} dataset')
+    print(f'\n\nRunning manual two fold CV with discover and replication ABCD datasets\n')
+
+    path2beh = wd / 'res' / val_beh_file
+    val_tab_all = pd.read_csv(path2beh) # beh data
+    val_tab_all = val_tab_all.dropna(subset = [val_beh]) # drop nans if there are in beh of interest
+    print(f'\nUsing: {val_beh}')
+    print(f'Behaviour data shape: {val_tab_all.shape}')
+
+    # attach confounds to tab_all if not there already before filtering
+    #NEED TO CHECK IF THIS WILL WORK WITH CONF REMOVAL
+    #if remove_confounds:
+    #    if confs_in_file:
+    #        tab_all = prep_confs(tab_all, wd, val_FC_file)
+
+    # remove outliers
+    #val_tab_all = filter_outliers(val_tab_all,val_beh)
+    #print(f'Behaviour data shape: {val_tab_all.shape}') # just to check
+
+    # load data and define leave out set
+    # table of subs (rows) by regions (columns)
+    path2FC = wd / 'input' / val_FC_file
+    val_FCs_all = dt.fread(path2FC)
+    val_FCs_all = val_FCs_all.to_pandas()
+    val_FCs_all = val_FCs_all.dropna()
+    print(f'\nUsing {val_FC_file}')
+    print(f'FC data shape: {val_FCs_all.shape}')
+
+    # Filter FC subs based on behaviour subs
+    val_tab, val_FCs = sort_files(val_tab_all, val_FCs_all)
+    # transform scores to SD_scores -> not sure if this is the right place for it
+
+    # set up X and y for prediction
+    val_target = val_tab.loc[:, [val_beh]]
+    val_FCs.pop(val_FCs.keys()[0])
+    print('\nFCs after removing subjects:')
+    print(val_FCs.head())
+
+    if zscr:
+        print('\nZscoring FCs...')
+        val_FCs = val_FCs.apply(lambda V: zscore(V), axis=1, result_type='broadcast')
+        print('zscored')
+    else:
+        print('\nNot zscoring!')
+
+    ## PREDCTION
+    print(f'\nTraining on full {FC_file} dataset...')
+    model.fit(X, np.ravel(y))
+
+    print(f'\nPredicting on external validation {val_FC_file} dataset...')
+    val_target_pred = model.predict(val_FCs)
+
+    # validation results to be saved
+    val_r = np.corrcoef(val_target_pred,np.ravel(val_target))
+    val_r2 = model.score(val_FCs,val_target)
+    val_MAE = metrics.mean_absolute_error(val_target,val_target_pred)
+    val_rMSE = metrics.mean_squared_error(val_target,val_target_pred)
+    val_res = {
+        "r":[val_r[0,1]],
+        "R2":[val_r2],
+        "MAE":[val_MAE],
+        "RMSE":[val_rMSE**(1/2)]
+    }
+    val_res_complete = pd.DataFrame(val_res)
+
+
+    ## PREDCTION otherway round
+    print(f'\nTraining on full {val_FC_file} dataset...')
+    model.fit(val_FCs, np.ravel(val_target))
+
+    print(f'\nPredicting on external validation {FC_file} dataset...')
+    target_pred = model.predict(X)
+
+    val_r = np.corrcoef(target_pred,np.ravel(y))
+    val_r2 = model.score(X,y)
+    val_MAE = metrics.mean_absolute_error(y,target_pred)
+    val_rMSE = metrics.mean_squared_error(y,target_pred)
+    val_res = {
+        "r":[val_r[0,1]],
+        "R2":[val_r2],
+        "MAE":[val_MAE],
+        "RMSE":[val_rMSE**(1/2)]
+    }
+    val_res= pd.DataFrame(val_res)
+    val_res_complete = pd.concat([val_res_complete,val_res],axis=0)
+    val_res_complete = val_res_complete.mean()
+
+    #print(f'Accuracy on external validation:')
+    print(f'Average accuracy on two fold:')
+    print(val_res_complete)
+
+    # Save full results
+    out_file = out_dir / 'manual_two_fold_CV'
+    out_file.mkdir(parents=True, exist_ok=True)
+    #out_file = out_file / f"pipe_{pipe}_averaged-source_{src_fc}-beh_{beh_f[len(beh_f)-1]}_{beh}-rseed_{rs}-validation_in_{val_FC_file}_{val_beh}-res.csv"
+    out_file = out_file / f"pipe_{pipe}_averaged-beh_{beh}-avg_{src_fc}_and_{val_FC_file}-rseed_{rs}-res.csv"
+    print(f'saving averaged accuracy: {out_file}')
+    val_res_complete.to_frame().transpose().to_csv(out_file, index=False)
 
 
 if subsample:

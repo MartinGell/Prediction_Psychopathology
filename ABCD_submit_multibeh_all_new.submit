@@ -1,7 +1,9 @@
 # Run specific variables
 dat = HCP2016FreeSurferSubcortical_abcd_baselineYear1Arm1_rest_3517.jay
-beh_f = abcd_cbcl_both_groups.csv
+beh_f = abcd_cbcl_grps_model_fits_baseline.csv
 pipe = ridgeCV_zscore_group_2Fold
+
+#abcd_cbcl_grps_model_fits_baseline.csv abcd_cbcl_grps_model_fits_followup.csv
 
 # The environment
 universe    = vanilla
@@ -9,7 +11,7 @@ getenv      = True
 
 # Resources
 request_cpus   = 1
-request_memory = 5G
+request_memory = 2G
 request_disk   = 1G
 
 # Execution
@@ -24,4 +26,4 @@ log         = $(initialdir)/logs/$(beh_f)_$(beh_i)_$(pipe)_$(Cluster).$(Process)
 output      = $(initialdir)/logs/$(beh_f)_$(beh_i)_$(pipe)_$(Cluster).$(Process).out
 error       = $(initialdir)/logs/$(beh_f)_$(beh_i)_$(pipe)_$(Cluster).$(Process).err
 
-queue beh_i from opts/factors_permutation_test.txt
+queue beh_i from opts/behs.txt

@@ -18,7 +18,7 @@ from sklearn.model_selection import ShuffleSplit, cross_validate, learning_curve
 
 ### Set params ###
 FC_file = sys.argv[1]#'HCP2016FreeSurferSubcortical_abcd_baselineYear1Arm1_rest_3517.jay' #'HCP2016FreeSurferSubcortical_abcd_baselineYear1Arm1_rest_3435.jay' #sys.argv[1] #'HCP2016FreeSurferSubcortical_abcd_baselineYear1Arm1_rest_3435.jay' #sys.argv[1]
-beh_file = sys.argv[2]#'abcd_cbcl_both_groups.csv' #sys.argv[2] #'abcd_cbcl_grp1_3434_model_fits.csv' #sys.argv[2]
+beh_file = sys.argv[2]#'abcd_cbcl_both_groups.csv' #sys.argv[2] #'abcd_cbcl_grp2_3517_model_fits.csv' #sys.argv[2]
 beh = sys.argv[3]#'EX_ACH2F'#'P_CLRK4S' #sys.argv[3] #'IN_ACH2F' 'cbcl_scr_syn_totprob_t' #'interview_age' 'cbcl_scr_syn_totprob_t' #sys.argv[3]
 pipe = sys.argv[4]#'ridgeCV_zscore_stratified_KFold_permutation' #sys.argv[4] #'ridgeCV_zscore' #sys.argv[4]
 
@@ -29,27 +29,26 @@ rs = 123456             # random state: int for reproducibility or None
 
 predict = True         # predict or just subsample?
 subsample = False       # Subsample data and compute learning curves?
-
 remove_confounds = False # Remove confounds?
 confs_in_file = False    # False = confs in beh file, otherwise it loads them from empirical data
-confounds = ['interview_age', 'gender'] #['Age', 'Sex', 'FS_IntraCranial_Vol'] # 'FS_Total_GM_Vol'
-categorical = ['gender'] #['Sex']   # of which categorical?
+confounds = ['interview_age', 'sex'] #['Age', 'Sex', 'FS_IntraCranial_Vol'] # 'FS_Total_GM_Vol'
+categorical = ['sex'] #['Sex']   # of which categorical?
 
-zscr = False             # zscore features
+zscr = True             # zscore features
 
 external_validation = False
-#val_FC_file = 'HCP2016FreeSurferSubcortical_abcd_baselineYear1Arm1_rest_3517.jay' #sys.argv[5] #'HCP2016FreeSurferSubcortical_abcd_baselineYear1Arm1_rest_3517.jay' #sys.argv[5]
-#val_beh_file = 'abcd_cbcl_grp2_3517_model_fits.csv' #sys.argv[6] #'abcd_cbcl_grp2_3517_model_fits.csv' #sys.argv[6]
+#val_FC_file = 'HCP2016FreeSurferSubcortical_abcd_baselineYear1Arm1_rest_3435.jay' #sys.argv[5] #'HCP2016FreeSurferSubcortical_abcd_baselineYear1Arm1_rest_3517.jay' #sys.argv[5]
+#val_beh_file = 'OLD/abcd_cbcl_grp1_3434_model_fits.csv' #sys.argv[6] #'abcd_cbcl_grp2_3517_model_fits.csv' #sys.argv[6]
 val_beh = beh
 
 val_split = False       # Split data to train and held out validation?
 val_split_size = 0.2    # Size of validation held out sample
 
-manual_val_split = True # use a grouping variable to split off validation
-grouping = 'sample'     # column that should be used to split the dataset
+manual_val_split = False # use a grouping variable to split off validation
+grouping = 'matched_group'     # column that should be used to split the dataset
 
-permute = True          # do permutation testing?
-perm = 100              # number or permutations if doings permutation testing
+permute = False          # do permutation testing?
+perm = 2#100              # number or permutations if doings permutation testing
 
 #res_folder = 'permutation' #sys.argv[7] #'disc_rep'    # save results separately to ...
 #designator = 'test'    # string designation of output file
@@ -252,13 +251,44 @@ if predict:
             for i in scores['estimator']: print(i[1].alpha_)
         #
     elif nested == 2: # two-fold prediction for ABCD
-        print('\nUsing stratified nested 2-fold CV with permutation!')
+        print('\nUsing stratified nested 2-fold CV!')
         outer_cv = GroupKFold(n_splits=2)  # 2-fold cross-validation using GroupKFold with groups replaced GroupSchuffleSplit
         
-        print('\nFirst running prediction with empirical results...')
+        # check group sizes
+        train_index, test_index = enumerate(outer_cv.split(X, y, tab[grouping]))
+        print(f'grp 1 N:{len(train_index[1][0])}, grp 2 N:{len(test_index[1][0])}')
+
+        print('\nRunning prediction with empirical results...')
         scores = cross_validate(model, X, np.ravel(y), groups=tab[grouping], scoring=scoring, cv=outer_cv,
             return_train_score=True, return_estimator=True, verbose=3, n_jobs=1)
         cv_res = pd.DataFrame(scores)
+
+        if pipe == ('EnetCV_2Fold' or 'EnetCV_2Fold_TEST'):                                          # put to utils?
+            for i in scores['estimator']: print(i.alphas_)
+            for i in scores['estimator']: print(i.alpha_)
+            for i in scores['estimator']: print(i.l1_ratio_)
+            weights = pd.DataFrame(scores['estimator'][1].coef_)
+        elif pipe == 'lassoLarsCV_2Fold':
+            for i in scores['estimator']: print(i.alpha_)
+            for i in scores['estimator']: print(i.alphas_)
+            for i in scores['estimator']: print(i.active_)
+            weights = pd.DataFrame(scores['estimator'][1].coef_)
+        elif pipe == 'ridgeCV_zscore_group_2Fold':
+            weights = pd.DataFrame(scores['estimator'][1][1].coef_)
+            for i in scores['estimator']: print(i[1].alpha_)
+        elif pipe == 'lassoLarsCV_zscore_group_2Fold':
+            for i in scores['estimator']: print(i[1].alpha_)
+            for i in scores['estimator']: print(i[1].alphas_)
+            weights = pd.DataFrame(scores['estimator'][1][1].coef_)
+            #weights.iloc[scores['estimator'][1][1].active_] # this gets only those edges that have some weights attached
+        else: print('NOT PRINTING')
+
+        # mean across coefficients? No, save both so you can check both and possibly for consistency?
+        w_file = out_dir / 'weights'
+        w_file.mkdir(parents=True, exist_ok=True)
+        w_file = w_file / f"pipe_{pipe}-source_{src_fc}-beh_{beh_f[len(beh_f)-1]}_{beh}-rseed_{rs}-weights.csv"
+        print(f'saving: {w_file}')
+        weights.to_csv(w_file)
 
         # Print results
         mean_accuracy = cv_res.mean()
@@ -286,13 +316,17 @@ if predict:
 #%%
 
 # Permutation testing adapted for 2-fold
-elif permute:
+if permute:
     if "group_2Fold" not in pipe:
         raise ValueError("You are probably using the wrong pipe argument - this permutation is set to group 2-fold CV.")
     
     print('\nUsing stratified nested 2-fold CV with permutation!')
     outer_cv = GroupKFold(n_splits=2)  # 2-fold cross-validation using GroupKFold with groups replaced GroupSchuffleSplit
-    
+
+    # check group sizes
+    train_index, test_index = enumerate(outer_cv.split(X, y, tab[grouping]))
+    print(f'grp 1 N:{len(train_index[1][0])}, grp 2 N:{len(test_index[1][0])}')
+
     print('\nFirst running prediction with empirical results...')
     scores = cross_validate(model, X, np.ravel(y), groups=tab[grouping], scoring=scoring, cv=outer_cv,
         return_train_score=True, return_estimator=True, verbose=3, n_jobs=1)
@@ -625,6 +659,7 @@ if external_validation:
     }
     val_res_complete = pd.DataFrame(val_res)
 
+    print(val_res_complete)
 
     ## PREDCTION otherway round
     print(f'\nTraining on full {val_FC_file} dataset...')
@@ -644,6 +679,8 @@ if external_validation:
         "RMSE":[val_rMSE**(1/2)]
     }
     val_res= pd.DataFrame(val_res)
+    print(val_res)
+
     val_res_complete = pd.concat([val_res_complete,val_res],axis=0)
     val_res_complete = val_res_complete.mean()
 

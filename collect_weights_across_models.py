@@ -52,7 +52,7 @@ wd = os.getcwd()
 wd = Path(os.path.dirname(wd))
 wd = Path(os.path.dirname(wd))
 
-in_data = wd / 'res' / 'collected_weights'
+data = wd / 'res' / 'collected_weights'
 
 out = wd / 'res' / 'spin'
 out.mkdir(parents=True, exist_ok=True)
@@ -107,11 +107,56 @@ for model in models:
 
     df_connectomes = pd.concat(all_files, axis=1)
 
+    # Correlate within model group
+    print('Correlating individual models...')
+    all_model_corrs = df_connectomes.corr()
+
+    # save => needs to be tested
+    pattern = r'_baseline_(.*?)\-rseed'
+    model_names = [match.group(1) for f in files if (match := re.search(pattern, f))]
+
+    all_model_corrs.columns = model_names
+    all_model_corrs.index = model_names
+    file_to_save = f"{data}/res/{pipe}_{feature}_{session}_correlation_between_weights{transform}_all_models_{model}.csv"
+    #all_model_corrs.to_csv(file_to_save, index=False)
+    #print(f'saved {file_to_save}')
+
     # mean across all models within category
     m_weights = df_connectomes.mean(axis=1)
     all_mean_weights.append(pd.Series(m_weights)) #for now cat do as spatial nulls for cortical impossible
 
+    # calculate node values (diag is nan so col average is ok)
+    m_weights_mat = connectome.vec_to_sym_matrix(m_weights,diagonal=np.repeat(np.nan,379))
+    roi_means = np.nanmean(m_weights_mat, axis = 0)
+    
+    # SAVE PLOT of weights
+    #display = plotting.plot_matrix(m_weights_mat)
+    m_weights_mat_sorted = m_weights_mat[indsort,indsort.T]
 
+    # DEVIDE BY SD FOR VISUALISATION
+    m_weights_mat_sorted = m_weights_mat_sorted / np.nanstd(m_weights_mat_sorted)
+    
+    cmap_custom = plt.cm.RdBu_r
+    max_abs_val = np.nanmax(np.abs(m_weights_mat_sorted))
+
+    plt.figure(figsize=(7, 7))
+    plt.imshow(m_weights_mat_sorted, origin='lower', cmap=cmap_custom, vmin=-max_abs_val, vmax=max_abs_val)
+    cbar = plt.colorbar(fraction=0.046)
+    ticks = [-max_abs_val, -0.5 * max_abs_val, 0, 0.5 * max_abs_val, max_abs_val]
+    cbar.set_ticks(ticks)
+    #cbar.ax.set_yticklabels(['{:.2g}'.format(t) for t in ticks]) # Format tick labels to two significant digits
+    cbar.ax.set_yticklabels(['{:.2g}'.format(t) for t in ticks], fontsize=20, fontdict={'fontname': 'Arial'}) # Format tick labels to two significant digits
+    cbar.ax.tick_params(labelsize=20)
+    plt.xticks(fontname='Arial')
+    plt.yticks(fontname='Arial')
+    plt.tick_params(labelsize=20)
+
+    file2save = file.split('/')[7].split('.')[0].split(f'_{model}_')[0]
+    file2save = f"{out_plt}/{file2save}_mean_weights{transform}_all_models_{model}.pdf"
+    print(f'saving: {file2save}')
+    plt.savefig(f'{file2save}', format = 'pdf', dpi=250)
+    plt.close()
+    #display.figure.clear()
 
 
 ### ADD CORRELATED FACTORS ###
@@ -131,15 +176,9 @@ for model in models:
 
     path2data = wd / f"res/weights{transform}"
 
-    if model == 'A': # attention naming is a little different
-        globber = os.path.join(path2data, f"*{pipe}*{feature}*abcd_cbcl_grps_model_fits_{session}_{model}_*")
-        files = glob.glob(globber)
-        globber = os.path.join(path2data, f"*{pipe}*{feature}*abcd_cbcl_grps_model_fits_{session}_{model}T*")
-        files += glob.glob(globber)
-    else:
-        globber = os.path.join(path2data, f"*{pipe}*{feature}*abcd_cbcl_grps_model_fits_{session}_{model}*")
-        files = glob.glob(globber)
-    #print(files)
+    globber = os.path.join(path2data, f"*{pipe}*{feature}*abcd_cbcl_grps_model_fits_{session}_{model}*")
+    files = glob.glob(globber)
+#print(files)
 
     all_files = []
     for file in files:
@@ -150,9 +189,56 @@ for model in models:
 
     df_connectomes = pd.concat(all_files, axis=1)
 
+    # Correlate within model group
+    print('Correlating individual models...')
+    all_model_corrs = df_connectomes.corr()
+
+    # save => needs to be tested
+    pattern = r'_baseline_(.*?)\-rseed'
+    model_names = [match.group(1) for f in files if (match := re.search(pattern, f))]
+
+    all_model_corrs.columns = model_names
+    all_model_corrs.index = model_names
+    file_to_save = f"{data}/res/{pipe}_{feature}_{session}_correlation_between_weights{transform}_all_models_{model}_cor_factors.csv"
+    #all_model_corrs.to_csv(file_to_save, index=False)
+    #print(f'saved {file_to_save}')
+
     # mean across all models within category
     m_weights = df_connectomes.mean(axis=1)
     all_mean_weights.append(pd.Series(m_weights)) #for now cat do as spatial nulls for cortical impossible
+
+    # calculate node values (diag is nan so col average is ok)
+    m_weights_mat = connectome.vec_to_sym_matrix(m_weights,diagonal=np.repeat(np.nan,379))
+    roi_means = np.nanmean(m_weights_mat, axis = 0)
+    
+    # SAVE PLOT of weights
+    #display = plotting.plot_matrix(m_weights_mat)
+    m_weights_mat_sorted = m_weights_mat[indsort,indsort.T]
+
+    # DEVIDE BY SD FOR VISUALISATION
+    m_weights_mat_sorted = m_weights_mat_sorted / np.nanstd(m_weights_mat_sorted)
+    
+    cmap_custom = plt.cm.RdBu_r
+    max_abs_val = np.nanmax(np.abs(m_weights_mat_sorted))
+
+    plt.figure(figsize=(7, 7))
+    plt.imshow(m_weights_mat_sorted, origin='lower', cmap=cmap_custom, vmin=-max_abs_val, vmax=max_abs_val)
+    cbar = plt.colorbar(fraction=0.046)
+    ticks = [-max_abs_val, -0.5 * max_abs_val, 0, 0.5 * max_abs_val, max_abs_val]
+    cbar.set_ticks(ticks)
+    #cbar.ax.set_yticklabels(['{:.2g}'.format(t) for t in ticks]) # Format tick labels to two significant digits
+    cbar.ax.set_yticklabels(['{:.2g}'.format(t) for t in ticks], fontsize=20, fontdict={'fontname': 'Arial'}) # Format tick labels to two significant digits
+    cbar.ax.tick_params(labelsize=20)
+    plt.xticks(fontname='Arial')
+    plt.yticks(fontname='Arial')
+    plt.tick_params(labelsize=20)
+
+    file2save = file.split('/')[7].split('.')[0].split(f'_{model}_')[0]
+    file2save = f"{out_plt}/{file2save}_mean_weights{transform}_all_models_{model}.pdf"
+    print(f'saving: {file2save}')
+    plt.savefig(f'{file2save}', format = 'pdf', dpi=250)
+    plt.close()
+    #display.figure.clear()
 
 
 models = ['P','E','I','cbcl_scr_syn_totprob','cbcl_scr_syn_external','cbcl_scr_syn_internal', 'extern_cor_factors','intern_cor_factors']
@@ -228,6 +314,6 @@ for i in range(N):
 corr_matrix += np.triu(corr_matrix, k=1).T
 pval_matrix += np.triu(pval_matrix, k=1).T
 
-np.savetxt(f'{out}/spin_cortical_all_factors_vs_sums_cmat.txt', corr_matrix)
-np.savetxt(f'{out}/spin_cortical_all_factors_vs_sums_pmat.txt', pval_matrix)
+#np.savetxt(f'{out}/spin_cortical_all_factors_vs_sums_cmat.txt', corr_matrix)
+#np.savetxt(f'{out}/spin_cortical_all_factors_vs_sums_pmat.txt', pval_matrix)
 

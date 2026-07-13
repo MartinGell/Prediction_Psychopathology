@@ -1,0 +1,1 @@
+See collect_weights_across_models.py in code directory for script to create matrices for Figure 4

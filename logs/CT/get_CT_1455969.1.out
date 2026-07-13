@@ -1,5 +1,0 @@
-Activating fmri_processing
-Running /data/project/impulsivity/pfactors/code/juseless/parcelate_cifti.sh sub-NDARINV00NPMHND in virtual environment
-Using parcellation: /data/project/impulsivity/dataset/inm7-superds/original/abcd/derivatives/abcd-hcp-pipeline/HCP2016FreeSurferSubcortical_dparc.dlabel.nii
-parcellated, saving /tmp/throw_away_sub-NDARINV00NPMHND.pscalar.nii
-writing file /data/project/impulsivity/pfactors/code/juseless/res/sub-NDARINV00NPMHND.txt

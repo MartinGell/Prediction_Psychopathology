@@ -44,24 +44,69 @@ def filter_outliers(tab, beh, SD=3):
     return tab
 
 
-def sort_files(tab, FCs):
-    print('\nSorting and filtering...')
-    #tab.iloc[:,0] = tab.iloc[:,0].astype(int)
-    #FCs.iloc[:,0] = FCs.iloc[:,0].astype(int)
+def align_on_id(
+    tab: pd.DataFrame,
+    features: pd.DataFrame,
+    target: str,
+    pheno_id: str,
+    features_id: str,
+    id_dtype=str,
+    verify: bool = True,
+    verbose: bool = True,
+):
+    """
+    Align two dataframes on subject IDs via an inner match, returning (tab_aligned, fcs_aligned)
+    with identical subject membership and row order.
+    """
+    # copies + type normalize
+    tab = tab.copy()
+    features = features.copy()
+    tab[pheno_id] = tab[pheno_id].astype(id_dtype)
+    features[features_id] = features[features_id].astype(id_dtype)
+    if id_dtype is str:
+        tab[pheno_id] = tab[pheno_id].str.strip()
+        features[features_id] = features[features_id].str.strip()
 
-    FCs = FCs.sort_values(by=FCs.keys()[0])
-    tab = tab.sort_values(by=tab.keys()[1])
+    # drop missing ids
+    print(f'Behaviour data shape: {tab.shape}')
+    tab = tab.dropna(subset=[target])
+    print(f'Dropping Nans, new Behaviour data shape: {tab.shape}')
 
-    FCs = FCs[FCs.iloc[:,0].isin(tab.iloc[:,1])]
-    tab = tab[tab.iloc[:,1].isin(FCs.iloc[:,0])]
-    # FTR_TRGT = FTR.join(TRGT, how='inner') => same thing!
-    if not all(FCs.iloc[:,0].to_numpy() == tab.iloc[:,1].to_numpy()):
-        raise Exception('ERROR: Subjects are not the same between FCs and behaviour')
-    
-    print(f'NEW Behaviour data shape: {tab.shape}')
-    print(f'NEW FC data shape: {FCs.shape}')
+    print(f'Feature data shape: {features.shape}')
+    features = features.dropna()
+    print(f'Dropping Nans, new feature data shape: {features.shape}')
 
-    return tab, FCs
+    # # drop duplicates within each frame
+    # tab = tab.drop_duplicates(subset=[pheno_id], keep=keep)
+    # features = features.drop_duplicates(subset=[features_id], keep=keep)
+
+    if verify:
+        if tab[pheno_id].duplicated().any():
+            raise ValueError("Duplicate IDs in 'tab'; resolve before aligning.")
+        if features[features_id].duplicated().any():
+            raise ValueError("Duplicate IDs in 'features'; resolve before aligning.")
+
+    # set index and sort for deterministic order
+    tab_i = tab.set_index(pheno_id).sort_index()
+    fcs_i = features.set_index(features_id).sort_index()
+
+    # inner subject set
+    ids = tab_i.index.intersection(fcs_i.index)
+
+    # reindex both to the same ordered IDs
+    tab_aln = tab_i.reindex(ids)
+    fcs_aln = fcs_i.reindex(ids)
+
+    if verify and not tab_aln.index.equals(fcs_aln.index):
+        raise RuntimeError("Post-align indices differ unexpectedly.")
+
+    if verbose:
+        print("\nSorting and filtering...")
+        print(f"Subjects in common: {len(ids)}")
+        print(f"NEW Behaviour (tab) shape: {tab_aln.shape}")
+        print(f"NEW FC (features) shape: {fcs_aln.shape}")
+
+    return tab_aln.reset_index(), fcs_aln.reset_index()
 
 
 def transform2SD(tab, beh, type):

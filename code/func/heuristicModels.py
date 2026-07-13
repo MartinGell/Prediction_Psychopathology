@@ -1,7 +1,7 @@
 
 # imports
 from sklearn.svm import LinearSVR, SVR
-from code.func.utils import heuristic_C
+from func.utils import heuristic_C
 
 
 # Define classes that use heruristics for hyperparameters

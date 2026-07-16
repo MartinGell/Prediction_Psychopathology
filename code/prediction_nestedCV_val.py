@@ -4,23 +4,23 @@ import os
 import sys
 import numpy as np
 import pandas as pd
-import datatable as dt
+#import datatable as dt
 import matplotlib.pyplot as plt
 
 from pathlib import Path
 from sklearn import metrics
 from scipy.stats import zscore
 
-from func.utils import filter_outliers, sort_files, cor_true_pred_pearson, cor_true_pred_spearman, prep_confs, mean_predictions
+from func.utils import align_on_id, cor_true_pred_pearson, cor_true_pred_spearman, prep_confs, mean_predictions
 from func.models import model_choice
 from sklearn.model_selection import ShuffleSplit, cross_validate, learning_curve, train_test_split, RepeatedKFold, KFold, GridSearchCV, GroupShuffleSplit, GroupKFold, permutation_test_score
 
 
 ### Set params ###
-FC_file = sys.argv[1]
-beh_file = sys.argv[2]
-beh = sys.argv[3]
-pipe = sys.argv[4]
+# FC_file = sys.argv[1]
+# beh_file = sys.argv[2]
+# beh = sys.argv[3]
+# pipe = sys.argv[4]
 
 k_inner = 5             # k folds for hyperparam search
 k_outer = 10            # k folds for CV
@@ -79,7 +79,6 @@ scoring = {"RMSE": "neg_root_mean_squared_error",
 # paths
 wd = os.getcwd()
 wd = Path(os.path.dirname(wd))
-wd = Path(os.path.dirname(wd))
 
 out_dir = wd / 'res' 
 if 'res_folder' in locals():
@@ -87,7 +86,7 @@ if 'res_folder' in locals():
     out_dir.mkdir(parents=True, exist_ok=True)
 
 # load behavioural measures
-path2beh = wd / 'res' / beh_file
+path2beh = wd / 'input' / 'pheno' / beh_file
 tab_all = pd.read_csv(path2beh) # beh data
 tab_all = tab_all.dropna(subset = [beh]) # drop nans if there are in beh of interest
 print(f'\nUsing {beh}')
@@ -98,19 +97,16 @@ if remove_confounds:
     if confs_in_file:
         tab_all = prep_confs(tab_all, wd, FC_file)
 
-# remove outliers
-#tab_all = filter_outliers(tab_all,beh)
-#print(f'Behaviour data shape: {tab_all.shape}') # just to check
-
 # load data and define leave out set
 # table of subs (rows) by regions (columns)
+path2FC = wd / 'input' / FC_file
 
-print(f'\nUsing {FC_file}')
-if FC_file.endswith('.jay'):
-    features_all = dt.fread(FC_file)
+print(f'\nUsing {path2FC}')
+if path2FC.suffix == '.jay':
+    features_all = dt.fread(path2FC)
     FCs_all = features_all.to_pandas()
 else:
-    FCs_all = pd.read_csv(FC_file)
+    FCs_all = pd.read_csv(path2FC)
 print(f'Feature data shape: {FCs_all.shape}')
 
 print(f'Dropping Nans, FC data shape: {FCs_all.shape}')
@@ -118,7 +114,7 @@ FCs_all = FCs_all.dropna()
 print(f'NEW FC data shape: {FCs_all.shape}')
 
 # Filter FC subs based on behaviour subs
-tab, FCs = sort_files(tab_all, FCs_all)
+tab, FCs = align_on_id(tab_all, FCs_all, target = beh, pheno_id="src_subject_id", features_id="src_subject_id")
 
 # set up X and y for prediction
 target = tab.loc[:, [beh]]
@@ -303,9 +299,11 @@ if predict:
                     X_normalized = X_grp.apply(lambda V: zscore(V), axis=0, result_type='broadcast') #zscore(X_grp, axis=0)
                     stacked_matrix = np.vstack((X_normalized.T, y_hat)).T
                     # calculate the covariance matrix
-                    cov_matrix = np.cov(stacked_matrix, rowvar=False)
+                    #cov_matrix = np.cov(stacked_matrix, rowvar=False)
                     # extract upper triangle for covariances between each column of X and y_hat
-                    covariances = cov_matrix[:-1, -1]
+                    #covariances = cov_matrix[:-1, -1] this crashed sometimes
+                    _y = stacked_matrix[:, -1]
+                    covariances = stacked_matrix[:, :-1].T @ (_y - _y.mean()) / (stacked_matrix.shape[0] - 1)
                     haufe.append(pd.Series(covariances))
                     grp+= 1     
         else:
@@ -335,7 +333,7 @@ if predict:
             haufe.to_csv(w_file)
 
         # Print results
-        mean_accuracy = cv_res.mean()
+        mean_accuracy = cv_res.drop(columns = 'estimator').mean()
         print(f'Overall MEAN accuracy:')
         print(mean_accuracy)
 
@@ -376,7 +374,7 @@ if permute:
     cv_res = pd.DataFrame(scores)
 
     # Print results
-    mean_accuracy = cv_res.mean()
+    mean_accuracy = cv_res.drop(columns = 'estimator').mean()
     print(f'Overall MEAN accuracy:')
     print(mean_accuracy)
 

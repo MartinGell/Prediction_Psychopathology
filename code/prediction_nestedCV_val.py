@@ -17,10 +17,10 @@ from sklearn.model_selection import ShuffleSplit, cross_validate, learning_curve
 
 
 ### Set params ###
-# FC_file = sys.argv[1]
-# beh_file = sys.argv[2]
-# beh = sys.argv[3]
-# pipe = sys.argv[4]
+FC_file = sys.argv[1]
+beh_file = sys.argv[2]
+beh = sys.argv[3]
+pipe = sys.argv[4]
 
 k_inner = 5             # k folds for hyperparam search
 k_outer = 10            # k folds for CV
@@ -410,7 +410,7 @@ if permute:
 #%%
 
 ###
-# NOTE THAT THIS SECTION HAS NOT BEEN TESTED FULLY and is not part of the main pipeline
+# NOTE: THAT THIS SECTION HAS NOT BEEN TESTED FULLY and is not part of the pipeline
 ###
 
 if val_split:

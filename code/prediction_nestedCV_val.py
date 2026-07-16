@@ -408,6 +408,11 @@ if permute:
 
 
 #%%
+
+###
+# NOTE THAT THIS SECTION HAS NOT BEEN TESTED FULLY and is not part of the main pipeline
+###
+
 if val_split:
     #print('\nWARNING: TAKING FIRST ESTIMATOR FROM ALL CVs.')
     #print('IF DIFFERENT WILL IMPACT FOLLOWING RESULTS.')

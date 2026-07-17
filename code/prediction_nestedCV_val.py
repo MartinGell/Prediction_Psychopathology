@@ -16,6 +16,33 @@ from func.models import model_choice
 from sklearn.model_selection import ShuffleSplit, cross_validate, learning_curve, train_test_split, RepeatedKFold, KFold, GridSearchCV, GroupShuffleSplit, GroupKFold, permutation_test_score
 
 
+
+"""
+This script is used to predict behavioural scores from functional connectivity (or other).
+There is a number of options that can be tweaked, e.g., confound removal, z-scoring of features,
+haufe transformation of weights, etc. in the script parameters section below.
+The script is designed to be run from the command line with appropriate arguments.
+
+It requires the following command line arguments in this exact order (no checking is done):
+    1. input features: name of the table with input features (e.g., functional connectivity matrix).
+    2. input phenotype: name of the table with input phenotypes (e.g., behavioural scores).
+    3. phenotype to predict: The specific column name of the phenotype in the input phenotype table (e.g., P-factor).
+    4. model: The machine learning model to use for prediction - available options in func/models.py
+       (e.g., ridgeCV_zscore_group_2Fold_confound_removal_wcategorical,
+       xgboost_group_2Fold_confound_removal_wcategorical, etc.).
+
+It outputs the prediction results, including cross-validation scores and model weights (if requested), to the specified output directory.
+
+Example usage (paths relative to project working directory):
+    python prediction_nestedCV_val.py Example_Schaefer400x17_data.csv Example_factors_with_grouping.csv P_CLRK ridgeCV_zscore_group_2Fold_confound_removal_wcategorical
+
+Author: Martin Gell
+Date: 2022-09-15
+"""
+
+
+
+
 ### Set params ###
 FC_file = sys.argv[1]
 beh_file = sys.argv[2]
@@ -35,11 +62,6 @@ confounds = ['sex']
 categorical = ['sex']   # of which categorical?
 
 zscr = True             # zscore features
-
-external_validation = False
-#val_FC_file = 'HCP2016FreeSurferSubcortical_abcd_baselineYear1Arm1_rest_3435.jay' #sys.argv[5] #'HCP2016FreeSurferSubcortical_abcd_baselineYear1Arm1_rest_3517.jay' #sys.argv[5]
-#val_beh_file = 'OLD/abcd_cbcl_grp1_3434_model_fits.csv' #sys.argv[6] #'abcd_cbcl_grp2_3517_model_fits.csv' #sys.argv[6]
-val_beh = beh
 
 val_split = False       # Split data to train and held out validation?
 val_split_size = 0.2    # Size of validation held out sample

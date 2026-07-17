@@ -4,9 +4,11 @@
 This is the code repo for our manuscript "Disentangling Brain-Psychopathology Associations: A Systematic Evaluation of Transdiagnostic Latent Factor Models" available [here](https://www.biorxiv.org/content/10.64898/2025.12.21.695029v3.full.pdf+html)
 
 <br />
+total set-up time: 5-20 minutes
+<br />
 
 
-## Prediction of Psychopathology factors
+# Prediction of Psychopathology factors
 
 This code is based on a prediction pipeline from https://github.com/MartinGell/Prediction_Reliability with minor changes and additions. For more detailed overivew see that repo.
 
@@ -20,6 +22,8 @@ Alongside with the two input files, two additional arguments are required: (i) t
 ```
 $ python3 prediction_nestedCV_val.py Example_Schaefer400x17_data.csv Example_factors_with_grouping.csv P_CLRK ridgeCV_zscore_group_2Fold_confound_removal_wcategorical
 ```
+
+The above code with example files is expected to run about 15 minutes.
 
 Other parameters (e.g. cross-validation, confound removal) have to be changed within the script itself.
 
@@ -44,3 +48,14 @@ To activate env:
 
 References: https://medium.com/swlh/setting-up-a-conda-environment-in-less-than-5-minutes-e64d8fc338e4
 
+<br />
+
+# Psychopathology factors
+
+Mplus code to fit CBCL item-level scores to obtain factor scores is in the `/mplus` folder. 
+Example format of input files is in the `/input` folder.
+
+<br />
+
+# Paper figures
+Code used to plot figures is in the `/plotting` folder.

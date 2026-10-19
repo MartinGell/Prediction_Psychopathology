@@ -18,7 +18,7 @@ Example files to run the updated prediction script in this repo can be found her
 - Example functional connectivity file is in `/input/` 
 - Example behavioural data file is in `/inpuy/pheno/` 
 
-Alongside with the two input files, two additional arguments are required: (i) the column to be predicted from the file with behavioural data and (ii) the prediction model to run (see `code/func/models.py` for available options). To recreate our findings, the user should choose the `ridgeCV_zscore_group_2Fold_confound_removal_wcategorical` model, which fits a Ridge regression on z-scored data after removing specified confounds (these can be specified in `prediction_nestedCV_val.py`), in this case the 'sex' variable. Therefore assuming the example files are the actual processed ABCD data which cannot be shared freely here, the analyses for this project would be recreated thus: 
+Alongside with the two input files, two additional arguments are required: (i) the column to be predicted from the file with behavioural data and (ii) the prediction model to run (see `code/func/models.py` for available options). To recreate our findings, the user should choose the `ridgeCV_zscore_group_2Fold_confound_removal_wcategorical` model, which fits a Ridge regression on z-scored data after removing specified confounds (these can be specified in `prediction_nestedCV_val.py`). Therefore assuming the example files are the actual processed ABCD data which cannot be shared freely here, an example prediction for this project could be recreated thus: 
 ```
 $ python3 prediction_nestedCV_val.py Example_Schaefer400x17_data.csv Example_factors_with_grouping.csv P_CLRK ridgeCV_zscore_group_2Fold_confound_removal_wcategorical
 ```

@@ -1,6 +1,11 @@
 #%%
 # Imports
 import os
+
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
+
 import sys
 import numpy as np
 import pandas as pd
@@ -10,11 +15,12 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 from sklearn import metrics
 from scipy.stats import zscore
+from threadpoolctl import threadpool_limits
 
-from func.utils import align_on_id, cor_true_pred_pearson, cor_true_pred_spearman, prep_confs, mean_predictions
+from func.utils import align_on_id, cor_true_pred_pearson, cor_true_pred_spearman, mean_predictions, final_estimator, haufe_transform
+from sklearn.base import clone
 from func.models import model_choice
 from sklearn.model_selection import ShuffleSplit, cross_validate, learning_curve, train_test_split, RepeatedKFold, KFold, GridSearchCV, GroupShuffleSplit, GroupKFold, permutation_test_score
-
 
 
 """
@@ -38,6 +44,10 @@ Example usage (paths relative to project working directory):
 
 Author: Martin Gell
 Date: 2022-09-15
+
+Edited: 2024-06-10 (Martin Gell)
+
+Updated: 2026-10-02 (Martin Gell)
 """
 
 
@@ -57,11 +67,10 @@ rs = 123456             # random state: int for reproducibility or None
 predict = True          # predict or just subsample?
 subsample = False       # Subsample data and compute learning curves?
 remove_confounds = True # Remove confounds?
-confs_in_file = False   # False = confs in beh file, otherwise it loads them from empirical data
-confounds = ['sex']
+confounds = ['interview_age', 'sex', 'parental_education', 'meanFD']
 categorical = ['sex']   # of which categorical?
 
-zscr = True             # zscore features
+zscr = False             # zscore features
 
 val_split = False       # Split data to train and held out validation?
 val_split_size = 0.2    # Size of validation held out sample
@@ -69,7 +78,10 @@ val_split_size = 0.2    # Size of validation held out sample
 manual_val_split = False # use a grouping variable to split off validation
 
 grouping = 'matched_group'     # column that should be used to split the dataset
-haufe_inversion = True
+
+# Feature weights transformation
+haufe_inversion = True  # haufe-transform weights of the model refit on all of X (excluding held-out validation)
+haufe_per_fold = True   # also save haufe patterns of each CV fold model (e.g. for split-half reliability)
 
 permute = False          # do permutation testing?
 perm = 1000              # number or permutations if doings permutation testing
@@ -114,10 +126,11 @@ tab_all = tab_all.dropna(subset = [beh]) # drop nans if there are in beh of inte
 print(f'\nUsing {beh}')
 print(f'Behaviour data shape: {tab_all.shape}')
 
-# attach confounds to tab_all if not there already before filtering
+# check if confounds are columns in phenotype file
 if remove_confounds:
-    if confs_in_file:
-        tab_all = prep_confs(tab_all, wd, FC_file)
+    missing = [c for c in confounds if c not in tab_all.columns]
+    if missing:
+        raise ValueError(f'Confounds {missing} not found in {beh_file}; add them to the behaviour file.')
 
 # load data and define leave out set
 # table of subs (rows) by regions (columns)
@@ -157,9 +170,7 @@ else:
 # set up for confound removal
 if remove_confounds:
     print('\nSetting up for confound removal...')
-    nested, model, grid = model_choice(pipe,X=FCs,confound=confounds,cat_columns=categorical)
     FCs.reset_index(inplace=True, drop=True)
-    print(f'Running prediction with {model}')
 
     for conf_i in confounds:
         print(f'Adding {conf_i}')
@@ -167,6 +178,12 @@ if remove_confounds:
         conf2remove.reset_index(inplace=True, drop=True)
         #FCs = FCs.append(tab[f'{conf_i}'], ignore_index=True)
         FCs[f'{conf_i}'] = conf2remove
+
+    # build the model AFTER confounds are appended: the ColumnTransformer column lists are fixed once run
+    nested, model, grid = model_choice(pipe,X=FCs,confound=confounds,cat_columns=categorical)
+    print(f'Running prediction with {model}')
+    if hasattr(model[0], 'transformers'):
+        print(f"Last continuous columns: {model[0].transformers[0][2][-4:]}, categorical columns: {model[0].transformers[1][2]}")
 else:
     print('\nNot removing confounds!')
     nested, model, grid = model_choice(pipe)
@@ -194,6 +211,8 @@ outer_cv = RepeatedKFold(n_splits=k_outer, n_repeats=n_outer, random_state=rs)
 beh_f = beh_file.split('.')[0]
 beh_f = beh_f.split('/')
 
+
+# PREDICTION
 # Only predict if requested
 if predict:
     print('\nRunning Prediction...')
@@ -204,26 +223,23 @@ if predict:
         print(f'{grid}')
         grid_search = GridSearchCV(estimator=model, param_grid=grid, n_jobs=1,
             cv=inner_cv, scoring="neg_root_mean_squared_error", verbose=3)    
-        scores = cross_validate(grid_search, X, np.ravel(y), scoring=scoring, cv=outer_cv,
-            return_train_score=True, return_estimator=True, verbose=3, n_jobs=1)
+        with threadpool_limits(limits=1):
+            scores = cross_validate(grid_search, X, np.ravel(y), scoring=scoring, cv=outer_cv,
+                return_train_score=True, return_estimator=True, verbose=3, n_jobs=1)
+        # train/test indices per fold, used for per-fold haufe
+        cv_indices = scores.pop('indices') 
         # results
         cv_res = pd.DataFrame(scores)
         for i in cv_res.loc[:,'estimator']: print(i.best_estimator_)             # put to utils?
-
-        # Print results
-        mean_accuracy = cv_res.mean()
-        print(f'Overall MEAN accuracy:')
-        print(mean_accuracy)
-
-        sd_accuracy = cv_res.std()
-        print(f'Overall SD accuracy:')
-        print(sd_accuracy)
         #
     elif nested == 0: # non-nested CV
         print('Using vanilla CV!')
         print(f'CV with {n_outer}x{k_outer}:')
-        scores = cross_validate(model, X, np.ravel(y), scoring=scoring, cv=outer_cv,
-            return_train_score=True, return_estimator=True, verbose=3, n_jobs=1)
+        with threadpool_limits(limits=1):
+            scores = cross_validate(model, X, np.ravel(y), scoring=scoring, cv=outer_cv,
+                return_train_score=True, return_estimator=True, verbose=3, n_jobs=1)
+        # train/test indices per fold, used for per-fold haufe
+        cv_indices = scores.pop('indices') 
         # results
         cv_res = pd.DataFrame(scores)
         if pipe == 'ridgeCV':                                                   # put to utils?
@@ -232,15 +248,6 @@ if predict:
             for i in scores['estimator']: print(i[1].alpha_)                       # put to utils?
         elif pipe.__contains__('confound'):
             for i in scores['estimator']: print(i[2].alpha_)    
-
-        # Print results
-        mean_accuracy = cv_res.mean()
-        print(f'Overall MEAN accuracy:')
-        print(mean_accuracy)
-
-        sd_accuracy = cv_res.std()
-        print(f'Overall SD accuracy:')
-        print(sd_accuracy)
         #
     elif nested == 99:
         print('Using stratified vanilla CV!')
@@ -250,8 +257,11 @@ if predict:
         print(f'CV with {splits} splits of {round((1-train_size)*100)}% of groups out')
         print(f'Grouping variable: {group}\n')
         outer_cv = GroupShuffleSplit(n_splits=splits, train_size=train_size, random_state=rs)
-        scores = cross_validate(model, X, np.ravel(y), groups=tab[group], scoring=scoring, cv=outer_cv,
-            return_train_score=True, return_estimator=True, verbose=3, n_jobs=1)
+        with threadpool_limits(limits=1):
+            scores = cross_validate(model, X, np.ravel(y), groups=tab[group], scoring=scoring, cv=outer_cv,
+                return_train_score=True, return_estimator=True, verbose=3, n_jobs=1)
+        # train/test indices per fold, used for per-fold haufe
+        cv_indices = scores.pop('indices')
         # results
         cv_res = pd.DataFrame(scores)
         if pipe == 'ridgeCV': # put to utils?
@@ -274,9 +284,11 @@ if predict:
             print(f'{grid}')
             grid_search = GridSearchCV(estimator=model, param_grid=grid, n_jobs=1,
             cv=inner_cv, scoring="neg_root_mean_squared_error", verbose=3) # on Juseless n_jobs=None
-            scores = cross_validate(grid_search, X, np.ravel(y), groups=tab[grouping], scoring=scoring, cv=outer_cv,
-            return_train_score=True, return_estimator=True, verbose=3, n_jobs=1)
+            with threadpool_limits(limits=1):
+                scores = cross_validate(grid_search, X, np.ravel(y), groups=tab[grouping], scoring=scoring, cv=outer_cv,
+                    return_train_score=True, return_estimator=True, verbose=3, n_jobs=1)
             cv_res = pd.DataFrame(scores)
+            cv_indices = scores.pop('indices')
 
             # After cross-validation
             for i, grid_search in enumerate(scores['estimator']):
@@ -286,80 +298,19 @@ if predict:
                     print(f"Outer fold {i + 1} is not a GridSearchCV object.")
         else:
             print('\nRunning prediction with empirical results...')
-            scores = cross_validate(model, X, np.ravel(y), groups=tab[grouping], scoring=scoring, cv=outer_cv,
-                return_train_score=True, return_estimator=True, verbose=3, n_jobs=1)
+            with threadpool_limits(limits=1):
+                scores = cross_validate(model, X, np.ravel(y), groups=tab[grouping], scoring=scoring, cv=outer_cv,
+                    return_train_score=True, return_estimator=True, verbose=3, n_jobs=1)
             cv_res = pd.DataFrame(scores)
+            cv_indices = scores.pop('indices')
 
-        weights = []
+    # DONE WITH PREDICTION 
+    # Print results
+    mean_accuracy = cv_res.drop(columns = 'estimator').mean()
+    print(f'Overall MEAN accuracy:')
+    print(mean_accuracy)
 
-        if pipe.endswith('_zscore_group_2Fold'):
-            for i in scores['estimator']: 
-                print(i[1].alpha_)
-                weights.append(pd.Series(i[1].coef_))
-        elif pipe.endswith('_confound_removal_wcategorical'):
-            for i in scores['estimator']: 
-                print(i[2].alpha_)
-                weights.append(pd.Series(i[2].coef_))
-                #
-            if haufe_inversion:
-                grp = 0
-                haufe = []
-                # extract haufe inverted weights
-                for best_model in scores['estimator']:
-                    print('Transforming weights with haufe transformation')
-                    y_grp = np.ravel(y)
-                    y_grp = y_grp[train_index[1][grp]]
-                    X_grp = X.iloc[train_index[1][grp]]
-                    print(f'predicting in train group {grp} :{len(y_grp)}')
-                    y_hat = best_model.predict(X_grp)
-                    print('Verify:')
-                    print(f'predicted in:, {y_hat.shape}. Fold size: {len(y_grp)}')
-                    print(f'r(y_hat, y) i.e. train score: {np.corrcoef(y_hat,y_grp)}')
-                    # now haufe transform
-                    #test code for single edge: Xpq = X_grp['0']; cov_mat = np.cov(np.vstack((zscore(Xpq),y_hat)))
-                    X_grp.pop(X_grp.keys()[71631])  # drop the confound column for haufe transform -> needs to be fixed, currently hard coded
-                    X_normalized = X_grp.apply(lambda V: zscore(V), axis=0, result_type='broadcast') #zscore(X_grp, axis=0)
-                    stacked_matrix = np.vstack((X_normalized.T, y_hat)).T
-                    # calculate the covariance matrix
-                    #cov_matrix = np.cov(stacked_matrix, rowvar=False)
-                    # extract upper triangle for covariances between each column of X and y_hat
-                    #covariances = cov_matrix[:-1, -1] this crashed sometimes
-                    _y = stacked_matrix[:, -1]
-                    covariances = stacked_matrix[:, :-1].T @ (_y - _y.mean()) / (stacked_matrix.shape[0] - 1)
-                    haufe.append(pd.Series(covariances))
-                    grp+= 1     
-        else:
-            try:
-                for i in scores['estimator']: 
-                    print(i.alpha_)
-                    weights.append(pd.Series(i.coef_))
-            except:
-                print('NOT PRINTING alphas')
-        
-        # should you mean across coefficients? No, save both so you can check both for consistency?
-        if weights:
-            w_file = out_dir / 'weights'
-            w_file.mkdir(parents=True, exist_ok=True)
-            w_file = w_file / f"pipe_{pipe}-source_{src_fc}-beh_{beh_f[len(beh_f)-1]}_{beh}-rseed_{rs}-weights.csv"
-            print(f'saving: {w_file}')
-            weights = pd.concat(weights, axis=1)
-            print(weights.shape)
-            weights.to_csv(w_file)
-        if haufe_inversion:
-            w_file = out_dir / 'weights_haufe'
-            w_file.mkdir(parents=True, exist_ok=True)
-            w_file = w_file / f"pipe_{pipe}-source_{src_fc}-beh_{beh_f[len(beh_f)-1]}_{beh}-rseed_{rs}-weights.csv"
-            print(f'saving: {w_file}')
-            haufe = pd.concat(haufe, axis=1)
-            print(haufe.shape)
-            haufe.to_csv(w_file)
-
-        # Print results
-        mean_accuracy = cv_res.drop(columns = 'estimator').mean()
-        print(f'Overall MEAN accuracy:')
-        print(mean_accuracy)
-
-    ## SAVE
+    # SAVE
     # CV results
     out_file = out_dir / 'cv'
     out_file.mkdir(parents=True, exist_ok=True)
@@ -374,6 +325,75 @@ if predict:
     print(f'saving averaged accuracy: {out_file}')
     mean_accuracy.to_frame().transpose().to_csv(out_file, index=False)
 
+
+    # WEIGHTS
+    if haufe_inversion:
+        print('\nRunning haufe transformation...')
+        # use a fitted CV model, skip models without linear weights as that would error out
+        cv_final_estimator = final_estimator(scores['estimator'][0]) if predict else None
+        if predict and not hasattr(cv_final_estimator, 'coef_'): # this feels awkward, but works?
+            print(f'\n{type(cv_final_estimator).__name__} has no linear weights (coef_), skipping haufe transformation!!\n')
+        else:
+            w_dir = out_dir / 'weights_haufe'
+            w_dir.mkdir(parents=True, exist_ok=True)
+            f_base = f"pipe_{pipe}-source_{src_fc}-beh_{beh_f[len(beh_f)-1]}_{beh}-rseed_{rs}"
+            var_yhat_all = {}
+
+            # refit the same estimator as in CV (incl. any GridSearchCV wrapper) on the full data
+            # as the model variable may not have hyperparm search defined until in the CV block (e.g. RidgeCV() vs Ridge())
+            full_model = clone(scores['estimator'][0]) if predict else clone(model)
+            print(f'Refitting on full data: {X.shape}')
+            with threadpool_limits(limits=1):
+                full_model.fit(X, np.ravel(y))
+
+            if hasattr(final_estimator(full_model), 'alpha_'):
+                print(f'full data alpha: {final_estimator(full_model).alpha_}')
+
+            # Do the actual haufe transform
+            haufe, var_yhat_all['full_model_refit'] = haufe_transform(full_model, X, y, label='full data', divide_by_var_yhat=False)
+
+            # Save haufe weights (i.e. A)
+            if haufe is not None:
+                w_file = w_dir / f"{f_base}-weights.csv"
+                print(f'saving: {w_file}')
+                haufe.to_frame(f'haufe_full_model_refit').to_csv(w_file)
+
+            # Save haufe per CV fold? 
+            if haufe_per_fold and haufe is not None:
+                if not predict:
+                    print('\nhaufe_per_fold needs predict = True to use a fitted model from CV, skipping!!\n')
+                else:
+                    haufe_folds = {}
+                    for fold, (fold_model, train_idx, test_idx) in enumerate(zip(scores['estimator'], cv_indices['train'], cv_indices['test'])):
+                        print(f'\nTransforming weights of fold {fold} with haufe transformation')
+                        X_train = X.iloc[train_idx]
+                        haufe_folds[f'haufe_fold_{fold}'], var_yhat_all[f'fold_{fold}'] = haufe_transform(
+                            fold_model, X_train, np.ravel(y)[train_idx], label=f'train group {fold}', divide_by_var_yhat=False)
+                        #
+                        # recompute the test score to check against the CV results
+                        y_true = np.ravel(y)[test_idx]
+                        with threadpool_limits(limits=1):
+                            y_pred = fold_model.predict(X.iloc[test_idx])
+                        print(f'predicted in test group {fold} :{len(y_true)}')
+                        print(f'r(y_pred, y_true) i.e. TEST score: {np.corrcoef(y_pred, y_true)}')
+
+                    # correlation between the full refit and average fold's pattern
+                    print(f'\nCorrelation between full refit and average fold pattern:') 
+                    print(f'{np.corrcoef(pd.DataFrame(haufe_folds).mean(axis=1), haufe)[0, 1]}\n')
+
+                    # Save per-fold haufe weights
+                    # Mean across coefficients? No, save both so you can check both for consistency/split-half reliability?
+                    w_file = w_dir / "per_fold_maps" / f"{f_base}-weights_folds.csv"
+                    w_file.parent.mkdir(parents=True, exist_ok=True)
+                    print(f'saving: {w_file}')
+                    pd.DataFrame(haufe_folds).to_csv(w_file)
+
+            # Save var(y_hat) per model, so you can rescale patterns later
+            if haufe is not None: # this has to be here as predict = False + nonlinear weight model like xgboost will throw error
+                w_file = w_dir / f"{f_base}-var_yhat.csv"
+                print(f'saving: {w_file}')
+                pd.Series(var_yhat_all, name='var_yhat_full_model_refit').to_csv(w_file, index_label='model')
+        
     print('\nFINISHED WITH PREDICTION\n')
 
 #%%

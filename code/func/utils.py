@@ -3,7 +3,8 @@
 import numpy as np
 import pandas as pd
 from scipy import stats
-
+from sklearn.pipeline import Pipeline
+from threadpoolctl import threadpool_limits
 
 __all__ = ['heuristic_C','filter_outliers','sort_files','transform2SD','cor_true_pred_pearson','cor_true_pred_pearson','mean_predictions','median_predictions','sd_predictions','test_cor_true_pred','prep_confs']
 
@@ -209,27 +210,74 @@ def test_cor_true_pred(y_true, y_pred):
     return cor
 
 
-def prep_confs(tab_all, confounds, wd, beh_file):
-    if 'HCP_A_total' in beh_file:
-        empirical_file = 'HCP_A_total.csv'
-        path2file = wd / 'text_files' / 'rel' / empirical_file
-        empirical_data = pd.read_csv(path2file)
-    if 'HCP_A_cryst' in beh_file:
-        empirical_file = 'HCP_A_cryst.csv'
-        path2file = wd / 'text_files' / 'rel' / empirical_file
-        empirical_data = pd.read_csv(path2file)
-    if 'HCP_A_motor' in beh_file:
-        empirical_file = 'HCP_A_motor.csv'
-        path2file = wd / 'text_files' / 'rel' / empirical_file
-        empirical_data = pd.read_csv(path2file)
+def final_estimator(model):
+    """Last step of a fitted model, unwrapping GridSearchCV and Pipeline if present."""
+    if hasattr(model, 'best_estimator_'):
+        model = model.best_estimator_
+    return model[-1] if isinstance(model, Pipeline) else model
 
-    print(f'Getting confs from: {empirical_file}')
-    for conf_i in confounds:
-        print(f'Adding {conf_i}')
-        conf2add = empirical_data[f'{conf_i}']
-        conf2add.reset_index(inplace=True, drop=True)
-        #FCs = FCs.append(tab[f'{conf_i}'], ignore_index=True)
-        tab_all[f'{conf_i}'] = conf2add
-    
-    return tab_all
+
+def haufe_transform(fitted_model, X, y, label='', divide_by_var_yhat=False):
+    """
+    Haufe et al. (2014, NeuroImage) activation pattern of a fitted linear model with a single target:
+
+        A = Cov(Z) w = cov(Z_i, y_hat)                                  (divide_by_var_yhat=False)
+        A = Cov(Z) w / var(y_hat) = cov(Z_i, y_hat) / var(y_hat)        (divide_by_var_yhat=True)
+
+    where Z are the features as the final estimator saw them (i.e. X), passed through all
+    pipeline steps.
+
+    Parameters
+    ----------
+    fitted_model : fitted estimator, Pipeline or GridSearchCV with a linear final estimator (coef_)
+    X : pandas.DataFrame | np.ndarray
+        Data the model was fitted on
+    y : array
+        Target the model was fitted on, only for sanity checks.
+    label : str
+        Name of the data used, only for printing.
+    divide_by_var_yhat : bool
+        For testing mostly
+        False (default): A = cov(Z_i, y_hat)
+        True: A = cov(Z_i, y_hat) / var(y_hat)
+
+    Returns
+    -------
+    A : pandas.Series | None
+        Haufe pattern, one value per feature seen by the final estimator. None if the model has no coef_.
+    var_yhat : float | None
+    """
+
+    with threadpool_limits(limits=1):
+        if hasattr(fitted_model, 'best_estimator_'):  # in case of GridSearchCV wrapped pipeline
+            fitted_model = fitted_model.best_estimator_
+        if not hasattr(final_estimator(fitted_model), 'coef_'):
+            print(f'{type(final_estimator(fitted_model)).__name__} has no linear weights (coef_), skipping haufe transformation')
+            return None, None
+
+        y = np.ravel(y)
+        print(f'predicting in {label} :{len(y)}')
+        y_hat = fitted_model.predict(X)
+        # This is only the training score, not used for model evaluation. Use CV accuracy as the performance!
+        print('Verify:')
+        print(f'predicted in:, {y_hat.shape}. Fold size: {len(y)}')
+        print(f'r(y_hat, y) i.e. TRAIN score: {np.corrcoef(y_hat, y)}')
+
+        # features the final estimator used
+        if isinstance(fitted_model, Pipeline) and len(fitted_model) > 1:
+            Z = np.asarray(fitted_model[:-1].transform(X), dtype=float)
+        else:  # in case there was no preprocessing
+            Z = np.array(X, dtype=float)
+        print(f'features seen by final estimator: {Z.shape}, n coefs: {final_estimator(fitted_model).coef_.shape}')
+
+        # covariance
+        Z -= Z.mean(axis=0)  # center in place to avoid memory issues
+        var_yhat = y_hat.var(ddof=1)
+        A = Z.T @ (y_hat - y_hat.mean()) / (Z.shape[0] - 1)
+        if divide_by_var_yhat:
+            A /= var_yhat
+    #
+    return pd.Series(A), var_yhat
+
+
 

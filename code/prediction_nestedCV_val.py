@@ -225,7 +225,7 @@ if predict:
             cv=inner_cv, scoring="neg_root_mean_squared_error", verbose=3)    
         with threadpool_limits(limits=1):
             scores = cross_validate(grid_search, X, np.ravel(y), scoring=scoring, cv=outer_cv,
-                return_train_score=True, return_estimator=True, verbose=3, n_jobs=1)
+                return_train_score=True, return_estimator=True, return_indices=True, verbose=3, n_jobs=1)
         # train/test indices per fold, used for per-fold haufe
         cv_indices = scores.pop('indices') 
         # results
@@ -237,7 +237,7 @@ if predict:
         print(f'CV with {n_outer}x{k_outer}:')
         with threadpool_limits(limits=1):
             scores = cross_validate(model, X, np.ravel(y), scoring=scoring, cv=outer_cv,
-                return_train_score=True, return_estimator=True, verbose=3, n_jobs=1)
+                return_train_score=True, return_estimator=True, return_indices=True,verbose=3, n_jobs=1)
         # train/test indices per fold, used for per-fold haufe
         cv_indices = scores.pop('indices') 
         # results
@@ -259,7 +259,7 @@ if predict:
         outer_cv = GroupShuffleSplit(n_splits=splits, train_size=train_size, random_state=rs)
         with threadpool_limits(limits=1):
             scores = cross_validate(model, X, np.ravel(y), groups=tab[group], scoring=scoring, cv=outer_cv,
-                return_train_score=True, return_estimator=True, verbose=3, n_jobs=1)
+                return_train_score=True, return_estimator=True, return_indices=True, verbose=3, n_jobs=1)
         # train/test indices per fold, used for per-fold haufe
         cv_indices = scores.pop('indices')
         # results
@@ -286,7 +286,7 @@ if predict:
             cv=inner_cv, scoring="neg_root_mean_squared_error", verbose=3) # on Juseless n_jobs=None
             with threadpool_limits(limits=1):
                 scores = cross_validate(grid_search, X, np.ravel(y), groups=tab[grouping], scoring=scoring, cv=outer_cv,
-                    return_train_score=True, return_estimator=True, verbose=3, n_jobs=1)
+                    return_train_score=True, return_estimator=True, return_indices=True, verbose=3, n_jobs=1)
             cv_res = pd.DataFrame(scores)
             cv_indices = scores.pop('indices')
 
@@ -300,7 +300,7 @@ if predict:
             print('\nRunning prediction with empirical results...')
             with threadpool_limits(limits=1):
                 scores = cross_validate(model, X, np.ravel(y), groups=tab[grouping], scoring=scoring, cv=outer_cv,
-                    return_train_score=True, return_estimator=True, verbose=3, n_jobs=1)
+                    return_train_score=True, return_estimator=True, return_indices=True, verbose=3, n_jobs=1)
             cv_res = pd.DataFrame(scores)
             cv_indices = scores.pop('indices')
 
